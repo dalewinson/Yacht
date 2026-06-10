@@ -5,27 +5,30 @@ import StatusBadge from '@/components/StatusBadge'
 import PriorityBadge from '@/components/PriorityBadge'
 import NewTicketButton from '@/components/NewTicketButton'
 import Link from 'next/link'
+import type { Database } from '@/types/database'
+
+type Equipment   = Database['public']['Tables']['equipment']['Row']
+type Ticket      = Database['public']['Tables']['tickets']['Row']
+type Part        = Database['public']['Tables']['parts']['Row']
+type Inspection  = Database['public']['Tables']['inspections']['Row']
 
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  const [
-    { data: equipment },
-    { data: tickets },
-    { data: parts },
-    { data: inspections },
-    { data: vessels },
-  ] = await Promise.all([
-    supabase.from('equipment').select('*').order('next_due'),
-    supabase.from('tickets').select('*, vessels(name)').order('created_at', { ascending: false }),
-    supabase.from('parts').select('*'),
-    supabase.from('inspections').select('*').order('created_at', { ascending: false }).limit(3),
-    supabase.from('vessels').select('id, name').order('name'),
-  ])
+  const { data: equipmentRaw } = await supabase.from('equipment').select('*').order('next_due')
+  const { data: ticketsRaw }   = await supabase.from('tickets').select('*, vessels(name)').order('created_at', { ascending: false })
+  const { data: partsRaw }     = await supabase.from('parts').select('*')
+  const { data: inspectionsRaw } = await supabase.from('inspections').select('*').order('created_at', { ascending: false }).limit(3)
+  const { data: vessels }      = await supabase.from('vessels').select('id, name').order('name')
 
-  const eq = equipment ?? []
-  const tk = tickets ?? []
-  const pt = parts ?? []
+  const equipment   = (equipmentRaw   ?? []) as Equipment[]
+  const tickets     = (ticketsRaw     ?? []) as (Ticket & { vessels: { name: string } | null })[]
+  const parts       = (partsRaw       ?? []) as Part[]
+  const inspections = (inspectionsRaw ?? []) as Inspection[]
+
+  const eq = equipment
+  const tk = tickets
+  const pt = parts
 
   const overdueCount  = eq.filter(e => getServiceStatus(e.next_due) === 'overdue').length
   const openTickets   = tk.filter(t => t.status !== 'closed' && t.status !== 'resolved')

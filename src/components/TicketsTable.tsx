@@ -22,7 +22,8 @@ export default function TicketsTable({ tickets: initial, vessels }: { tickets: T
 
   async function updateStatus(id: string, status: TicketStatus) {
     const supabase = createClient()
-    await supabase.from('tickets').update({ status }).eq('id', id)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('tickets').update({ status }).eq('id', id)
     setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null)
   }

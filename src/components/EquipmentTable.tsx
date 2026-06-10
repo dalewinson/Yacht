@@ -119,19 +119,10 @@ function EquipmentEditModal({ equipment: e, onClose, onSaved }: {
     setError('')
 
     const supabase = createClient()
-    const { data, error: err } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error: err } = await (supabase as any)
       .from('equipment')
-      .update({
-        name,
-        category,
-        model:         model || null,
-        serial:        serial || null,
-        last_service:  lastService || null,
-        next_due:      nextDue || null,
-        interval,
-        assigned_tech: assignedTech || null,
-        notes:         notes || null,
-      })
+      .update({ name, category, model: model||null, serial: serial||null, last_service: lastService||null, next_due: nextDue||null, interval, assigned_tech: assignedTech||null, notes: notes||null })
       .eq('id', e.id)
       .select()
       .single()

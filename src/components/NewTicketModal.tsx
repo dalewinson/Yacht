@@ -31,7 +31,8 @@ export default function NewTicketModal({ vessels, onClose, onCreated }: Props) {
     setError('')
 
     const supabase = createClient()
-    const { data, error: err } = await supabase.from('tickets').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error: err } = await (supabase as any).from('tickets').insert({
       vessel_id:   vesselId,
       title:       title.trim(),
       description: description.trim() || null,

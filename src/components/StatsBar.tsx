@@ -1,22 +1,23 @@
 import { createClient } from '@/lib/supabase/server'
+import type { Database } from '@/types/database'
+
+type Ticket = Database['public']['Tables']['tickets']['Row']
 
 export default async function StatsBar() {
   const supabase = await createClient()
+  const { data } = await supabase.from('tickets').select('status, priority')
+  const tickets = (data ?? []) as Pick<Ticket, 'status' | 'priority'>[]
 
-  const { data: tickets } = await supabase
-    .from('tickets')
-    .select('status, priority')
-
-  const total = tickets?.length ?? 0
-  const open = tickets?.filter(t => t.status === 'open').length ?? 0
-  const inProgress = tickets?.filter(t => t.status === 'in_progress').length ?? 0
-  const urgent = tickets?.filter(t => t.priority === 'urgent').length ?? 0
+  const total      = tickets.length
+  const open       = tickets.filter(t => t.status === 'open').length
+  const inProgress = tickets.filter(t => t.status === 'in_progress').length
+  const urgent     = tickets.filter(t => t.priority === 'urgent').length
 
   const stats = [
-    { label: 'Total Tickets', value: total, color: 'text-gray-900' },
-    { label: 'Open', value: open, color: 'text-blue-600' },
-    { label: 'In Progress', value: inProgress, color: 'text-yellow-600' },
-    { label: 'Urgent', value: urgent, color: 'text-red-600' },
+    { label: 'Total Tickets', value: total,      color: 'text-gray-900' },
+    { label: 'Open',          value: open,       color: 'text-blue-600' },
+    { label: 'In Progress',   value: inProgress, color: 'text-yellow-600' },
+    { label: 'Urgent',        value: urgent,     color: 'text-red-600' },
   ]
 
   return (
