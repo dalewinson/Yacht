@@ -17,7 +17,7 @@ type Manual = {
   uploaded_at: string
 }
 
-const CATEGORIES = ['Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
+const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 function fmtSize(bytes: number | null) {
   if (!bytes) return '—'

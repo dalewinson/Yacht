@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { TicketPriority } from '@/types/database'
 
-const CATEGORIES = ['Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
+const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 interface Props {
   vessels: { id: string; name: string }[]

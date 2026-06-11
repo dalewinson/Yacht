@@ -8,7 +8,7 @@ import type { Database, ServiceInterval } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 
-const CATEGORIES = ['Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
+const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 const INTERVALS: ServiceInterval[] = ['monthly','quarterly','biannual','annual']
 
 export default function EquipmentTable({ equipment: initial }: { equipment: Equipment[] }) {

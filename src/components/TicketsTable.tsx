@@ -11,7 +11,7 @@ import type { Database, TicketStatus } from '@/types/database'
 type Ticket = Database['public']['Tables']['tickets']['Row'] & { vessels: { name: string } | null }
 type Vessel = { id: string; name: string }
 
-const CATEGORIES = ['Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
+const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 export default function TicketsTable({ tickets: initial, vessels }: { tickets: Ticket[]; vessels: Vessel[] }) {
   const [tickets, setTickets] = useState(initial)
