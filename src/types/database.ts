@@ -47,6 +47,11 @@ export interface Database {
         Insert: { id?: string; ticket_id: string; body: string; author?: string }
         Update: { body?: string }
       }
+      manuals: {
+        Row: { id: string; vessel_id: string | null; equipment_id: string | null; name: string; category: string | null; storage_path: string; anthropic_file_id: string | null; size_bytes: number | null; page_count: number | null; uploaded_at: string }
+        Insert: { id?: string; vessel_id?: string | null; equipment_id?: string | null; name: string; category?: string | null; storage_path: string; anthropic_file_id?: string | null; size_bytes?: number | null; page_count?: number | null }
+        Update: { name?: string; category?: string | null; equipment_id?: string | null; anthropic_file_id?: string | null }
+      }
     }
     Enums: {
       ticket_status: TicketStatus
