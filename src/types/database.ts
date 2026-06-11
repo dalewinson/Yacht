@@ -48,9 +48,9 @@ export interface Database {
         Update: { body?: string }
       }
       manuals: {
-        Row: { id: string; vessel_id: string | null; equipment_id: string | null; name: string; category: string | null; storage_path: string; anthropic_file_id: string | null; size_bytes: number | null; page_count: number | null; uploaded_at: string }
+        Row: { id: string; vessel_id: string | null; equipment_id: string | null; name: string; category: string | null; storage_path: string; anthropic_file_id: string | null; size_bytes: number | null; page_count: number | null; pages: string[] | null; indexed_at: string | null; uploaded_at: string }
         Insert: { id?: string; vessel_id?: string | null; equipment_id?: string | null; name: string; category?: string | null; storage_path: string; anthropic_file_id?: string | null; size_bytes?: number | null; page_count?: number | null }
-        Update: { name?: string; category?: string | null; equipment_id?: string | null; anthropic_file_id?: string | null }
+        Update: { name?: string; category?: string | null; equipment_id?: string | null; anthropic_file_id?: string | null; pages?: string[] | null; page_count?: number | null; indexed_at?: string | null }
       }
     }
     Enums: {

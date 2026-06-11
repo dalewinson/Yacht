@@ -46,7 +46,9 @@ export default function ManualsClient({
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
   const [answer, setAnswer] = useState('')
+  const [sources, setSources] = useState<string[]>([])
   const [askErr, setAskErr] = useState('')
+  const [indexing, setIndexing] = useState<Set<string>>(new Set())
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -95,6 +97,21 @@ export default function ManualsClient({
     if (added.length) setManuals(prev => [...added, ...prev])
     setUploading(false)
     if (fileInput.current) fileInput.current.value = ''
+
+    // Extract text in the background so the first question is fast.
+    for (const m of added) indexManual(m.id)
+  }
+
+  async function indexManual(id: string) {
+    setIndexing(prev => new Set(prev).add(id))
+    try {
+      await fetch('/api/manuals/index', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ manualId: id }),
+      })
+    } catch {}
+    setIndexing(prev => { const n = new Set(prev); n.delete(id); return n })
   }
 
   async function deleteManual(m: Manual) {
@@ -115,6 +132,7 @@ export default function ManualsClient({
     if (!question.trim() || selected.size === 0) return
     setAsking(true)
     setAnswer('')
+    setSources([])
     setAskErr('')
     try {
       const res = await fetch('/api/manuals/ask', {
@@ -125,6 +143,7 @@ export default function ManualsClient({
       const data = await res.json()
       if (!res.ok) { setAskErr(data.error ?? 'Something went wrong.'); return }
       setAnswer(data.answer)
+      setSources(data.sources ?? [])
     } catch {
       setAskErr('Could not reach the AI service.')
     } finally {
@@ -202,7 +221,9 @@ export default function ManualsClient({
                        className="text-[#185FA5] hover:underline truncate block">
                       <i className="ti ti-file-type-pdf text-[13px] mr-1" />{m.name}
                     </a>
-                    {m.category && <span className="text-[10px] text-[var(--color-text-tertiary)]">{m.category}</span>}
+                    {indexing.has(m.id)
+                      ? <span className="text-[10px] text-[#185FA5]">Reading text…</span>
+                      : m.category && <span className="text-[10px] text-[var(--color-text-tertiary)]">{m.category}</span>}
                   </td>
                   <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)] truncate">{equipName(m.equipment_id) ?? '—'}</td>
                   <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtSize(m.size_bytes)}</td>
@@ -250,6 +271,13 @@ export default function ManualsClient({
           <div className="mt-3 pt-3 border-t border-[var(--color-border-tertiary)] flex-1 overflow-y-auto">
             <div className="text-[10px] uppercase tracking-wider text-[var(--color-text-tertiary)] mb-1.5">Answer</div>
             <p className="text-[12px] text-[var(--color-text-primary)] leading-relaxed whitespace-pre-wrap">{answer}</p>
+            {sources.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1">
+                {sources.map(s => (
+                  <span key={s} className="text-[10px] text-[var(--color-text-secondary)] bg-[var(--color-background-secondary)] border border-[var(--color-border-tertiary)] rounded px-1.5 py-0.5">{s}</span>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
