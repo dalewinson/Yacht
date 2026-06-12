@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
+import { getVesselContext } from '@/lib/vessel'
 import ManualsClient from '@/components/ManualsClient'
 
 export default async function ManualsPage() {
   const supabase = await createClient()
+  const { activeId } = await getVesselContext()
+  const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const [{ data: manualsRaw }, { data: equipmentRaw }, { data: vessels }] = await Promise.all([
-    (supabase as any).from('manuals').select('*').order('uploaded_at', { ascending: false }),
-    supabase.from('equipment').select('id, name, category').order('name'),
-    supabase.from('vessels').select('id, name').order('name'),
+  const [{ data: manualsRaw }, { data: equipmentRaw }] = await Promise.all([
+    (supabase as any).from('manuals').select('*').eq('vessel_id', vid).order('uploaded_at', { ascending: false }),
+    supabase.from('equipment').select('id, name, category').eq('vessel_id', vid).order('name'),
   ])
 
   return (
@@ -21,7 +23,7 @@ export default async function ManualsPage() {
       <ManualsClient
         manuals={(manualsRaw ?? []) as any[]}
         equipment={(equipmentRaw ?? []) as { id: string; name: string; category: string }[]}
-        vesselId={((vessels ?? [])[0] as { id: string } | undefined)?.id ?? null}
+        vesselId={activeId}
       />
     </div>
   )

@@ -2,15 +2,18 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
+import { getVesselContext } from '@/lib/vessel'
 
 const geist = Geist({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Fairwinds — M/Y PATRON',
+  title: 'Fairwinds — Yacht Maintenance',
   description: 'Yacht maintenance tracker',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { vessels, activeId } = await getVesselContext()
+
   return (
     <html lang="en">
       <head>
@@ -18,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${geist.className} h-screen overflow-hidden`} suppressHydrationWarning>
         <div className="flex h-full bg-[var(--color-background-tertiary)]">
-          <Sidebar />
+          <Sidebar vessels={vessels} activeId={activeId} />
           <main className="flex-1 overflow-y-auto">
             {children}
           </main>

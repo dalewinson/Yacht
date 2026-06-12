@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import VesselSwitcher from './VesselSwitcher'
+import type { VesselLite } from '@/lib/vessel-shared'
 
 const NAV = [
   { section: 'Operations' },
@@ -24,7 +26,7 @@ const BOTTOM = [
   { label: 'Settings', href: '/settings', icon: 'ti-settings' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ vessels, activeId }: { vessels: VesselLite[]; activeId: string | null }) {
   const path = usePathname()
 
   function isActive(href: string) {
@@ -34,11 +36,11 @@ export default function Sidebar() {
 
   return (
     <aside className="w-[195px] flex-shrink-0 flex flex-col border-r border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)]">
-      <div className="px-4 py-4 border-b border-[var(--color-border-tertiary)]">
-        <p className="text-[11px] text-[var(--color-text-secondary)]">73 ft · M/Y PATRON</p>
-        <h2 className="text-[15px] font-medium text-[var(--color-text-primary)] flex items-center gap-1.5 mt-0.5">
-          <i className="ti ti-ship" /> Fairwinds
-        </h2>
+      <div className="px-4 py-3 border-b border-[var(--color-border-tertiary)]">
+        <div className="text-[13px] font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5 mb-2.5">
+          <i className="ti ti-anchor text-[14px] text-[#185FA5]" /> Fairwinds
+        </div>
+        <VesselSwitcher vessels={vessels} activeId={activeId} />
       </div>
 
       <nav className="flex-1 py-2">

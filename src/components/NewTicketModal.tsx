@@ -7,13 +7,12 @@ import type { TicketPriority } from '@/types/database'
 const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 interface Props {
-  vessels: { id: string; name: string }[]
+  vesselId: string
   onClose: () => void
   onCreated?: (ticket: Record<string, unknown>) => void
 }
 
-export default function NewTicketModal({ vessels, onClose, onCreated }: Props) {
-  const [vesselId, setVesselId]     = useState(vessels[0]?.id ?? '')
+export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) {
   const [title, setTitle]           = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]     = useState('')
@@ -25,7 +24,6 @@ export default function NewTicketModal({ vessels, onClose, onCreated }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim()) { setError('Title is required.'); return }
-    if (!vesselId)      { setError('Please select a vessel.'); return }
 
     setSaving(true)
     setError('')
@@ -83,13 +81,6 @@ export default function NewTicketModal({ vessels, onClose, onCreated }: Props) {
               <input type="text" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}
                 placeholder="Name"
                 className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
-            </div>
-            <div>
-              <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Vessel</label>
-              <select value={vesselId} onChange={e => setVesselId(e.target.value)}
-                className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
-                {vessels.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-              </select>
             </div>
           </div>
 

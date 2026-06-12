@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getVesselContext } from '@/lib/vessel'
 import { getServiceStatus, fmtDate } from '@/lib/utils'
 import ServiceStatusBadge from '@/components/ServiceStatusBadge'
 import StatusBadge from '@/components/StatusBadge'
@@ -14,12 +15,13 @@ type Inspection  = Database['public']['Tables']['inspections']['Row']
 
 export default async function DashboardPage() {
   const supabase = await createClient()
+  const { activeId } = await getVesselContext()
+  const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const { data: equipmentRaw } = await supabase.from('equipment').select('*').order('next_due')
-  const { data: ticketsRaw }   = await supabase.from('tickets').select('*, vessels(name)').order('created_at', { ascending: false })
-  const { data: partsRaw }     = await supabase.from('parts').select('*')
-  const { data: inspectionsRaw } = await supabase.from('inspections').select('*').order('created_at', { ascending: false }).limit(3)
-  const { data: vessels }      = await supabase.from('vessels').select('id, name').order('name')
+  const { data: equipmentRaw } = await supabase.from('equipment').select('*').eq('vessel_id', vid).order('next_due')
+  const { data: ticketsRaw }   = await supabase.from('tickets').select('*, vessels(name)').eq('vessel_id', vid).order('created_at', { ascending: false })
+  const { data: partsRaw }     = await supabase.from('parts').select('*').eq('vessel_id', vid)
+  const { data: inspectionsRaw } = await supabase.from('inspections').select('*').eq('vessel_id', vid).order('created_at', { ascending: false }).limit(3)
 
   const equipment   = (equipmentRaw   ?? []) as Equipment[]
   const tickets     = (ticketsRaw     ?? []) as (Ticket & { vessels: { name: string } | null })[]
@@ -50,7 +52,7 @@ export default async function DashboardPage() {
           <span className="text-[11px] text-[var(--color-text-secondary)]">
             {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </span>
-          <NewTicketButton vessels={vessels ?? []} />
+          <NewTicketButton vesselId={activeId} />
         </div>
       </div>
 

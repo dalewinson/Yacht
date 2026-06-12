@@ -1,11 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
+import { getVesselContext } from '@/lib/vessel'
 import EquipmentTable from '@/components/EquipmentTable'
 
 export default async function EquipmentPage() {
   const supabase = await createClient()
+  const { activeId } = await getVesselContext()
+  const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
+
   const { data: equipment } = await supabase
     .from('equipment')
     .select('*')
+    .eq('vessel_id', vid)
     .order('name')
 
   return (

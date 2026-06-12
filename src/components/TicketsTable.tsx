@@ -9,11 +9,10 @@ import NewTicketButton from './NewTicketButton'
 import type { Database, TicketStatus } from '@/types/database'
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & { vessels: { name: string } | null }
-type Vessel = { id: string; name: string }
 
 const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
-export default function TicketsTable({ tickets: initial, vessels }: { tickets: Ticket[]; vessels: Vessel[] }) {
+export default function TicketsTable({ tickets: initial, vesselId }: { tickets: Ticket[]; vesselId: string | null }) {
   const [tickets, setTickets] = useState(initial)
   const [selected, setSelected] = useState<Ticket | null>(null)
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all')
@@ -44,7 +43,7 @@ export default function TicketsTable({ tickets: initial, vessels }: { tickets: T
             </button>
           ))}
         </div>
-        <NewTicketButton vessels={vessels} onCreated={t => setTickets(prev => [t as Ticket, ...prev])} />
+        <NewTicketButton vesselId={vesselId} onCreated={t => setTickets(prev => [t as Ticket, ...prev])} />
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-hidden">
