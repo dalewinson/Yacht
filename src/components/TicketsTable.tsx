@@ -8,7 +8,11 @@ import PriorityBadge from './PriorityBadge'
 import NewTicketButton from './NewTicketButton'
 import type { Database, TicketStatus } from '@/types/database'
 
-type Ticket = Database['public']['Tables']['tickets']['Row'] & { vessels: { name: string } | null }
+type Attachment = { id: string; storage_path: string; content_type: string | null }
+type Ticket = Database['public']['Tables']['tickets']['Row'] & {
+  vessels: { name: string } | null
+  ticket_attachments?: Attachment[]
+}
 
 const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
@@ -65,7 +69,11 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
               <tr key={t.id} className="hover:bg-[var(--color-background-secondary)]">
                 <td className="pl-4 pr-2 py-2 text-[var(--color-text-secondary)] text-[11px] border-b border-[var(--color-border-tertiary)]">#{i + 1001}</td>
                 <td className="px-2 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
-                  <button onClick={() => setSelected(t)} className="text-[#185FA5] hover:underline text-left truncate w-full">{t.title}</button>
+                  <button onClick={() => setSelected(t)} className="text-[#185FA5] hover:underline text-left truncate w-full">
+                    {t.source === 'sms' && <i className="ti ti-message-2 text-[11px] mr-1" title="From text" />}
+                    {t.title}
+                    {t.ticket_attachments && t.ticket_attachments.length > 0 && <i className="ti ti-paperclip text-[11px] ml-1 text-[var(--color-text-tertiary)]" />}
+                  </button>
                 </td>
                 <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.category ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]"><PriorityBadge priority={t.priority} /></td>
@@ -115,6 +123,7 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus }: {
           ['Description', t.title],
           ['Category',    t.category ?? '—'],
           ['Assigned to', t.assigned_to ?? '—'],
+          ['Source',      t.source === 'sms' ? `Text${t.reported_by ? ` · ${t.reported_by}` : ''}` : t.source],
           ['Reported',    fmtDate(t.created_at)],
         ].map(([l, v]) => (
           <div key={l} className="flex justify-between py-[5px] border-b border-[var(--color-border-tertiary)] text-[12px]">
@@ -130,7 +139,26 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus }: {
         {t.description && (
           <>
             <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)] mt-3 mb-2">Details</div>
-            <p className="text-[12px] text-[var(--color-text-primary)] leading-relaxed">{t.description}</p>
+            <p className="text-[12px] text-[var(--color-text-primary)] leading-relaxed whitespace-pre-wrap">{t.description}</p>
+          </>
+        )}
+
+        {t.ticket_attachments && t.ticket_attachments.length > 0 && (
+          <>
+            <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)] mt-3 mb-2">Photos</div>
+            <div className="grid grid-cols-3 gap-2">
+              {t.ticket_attachments.map(a => {
+                const url = createClient().storage.from('ticket-media').getPublicUrl(a.storage_path).data.publicUrl
+                const isVideo = (a.content_type ?? '').startsWith('video')
+                return (
+                  <a key={a.id} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden rounded-[var(--border-radius-md)] border border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)]">
+                    {isVideo
+                      ? <div className="w-full h-full flex items-center justify-center text-[var(--color-text-secondary)]"><i className="ti ti-video text-[22px]" /></div>
+                      : <img src={url} alt="attachment" className="w-full h-full object-cover" />}
+                  </a>
+                )
+              })}
+            </div>
           </>
         )}
 

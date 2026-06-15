@@ -13,9 +13,14 @@ export interface Database {
         Update: { id?: string; name?: string; owner_name?: string; owner_phone?: string; notes?: string | null }
       }
       tickets: {
-        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null }
-        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null }
+        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null; reported_by?: string | null }
+        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null; reported_by?: string | null }
+      }
+      ticket_attachments: {
+        Row: { id: string; ticket_id: string; storage_path: string; content_type: string | null; created_at: string }
+        Insert: { id?: string; ticket_id: string; storage_path: string; content_type?: string | null }
+        Update: { content_type?: string | null }
       }
       equipment: {
         Row: { id: string; vessel_id: string; name: string; category: string; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; assigned_tech: string | null; notes: string | null; created_at: string }

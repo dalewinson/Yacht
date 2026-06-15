@@ -8,7 +8,7 @@ export default async function TicketsPage() {
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
   const { data: tickets } = await supabase
-    .from('tickets').select('*, vessels(name)').eq('vessel_id', vid)
+    .from('tickets').select('*, vessels(name), ticket_attachments(id, storage_path, content_type)').eq('vessel_id', vid)
     .order('created_at', { ascending: false })
 
   return (
