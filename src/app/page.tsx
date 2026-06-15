@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
-import { getServiceStatus, fmtDate } from '@/lib/utils'
+import { computeService, fmtDate } from '@/lib/utils'
 import ServiceStatusBadge from '@/components/ServiceStatusBadge'
 import StatusBadge from '@/components/StatusBadge'
 import PriorityBadge from '@/components/PriorityBadge'
@@ -32,10 +32,10 @@ export default async function DashboardPage() {
   const tk = tickets
   const pt = parts
 
-  const overdueCount  = eq.filter(e => getServiceStatus(e.next_due) === 'overdue').length
+  const overdueCount  = eq.filter(e => computeService(e).status === 'overdue').length
   const openTickets   = tk.filter(t => t.status !== 'closed' && t.status !== 'resolved')
   const lowParts      = pt.filter(p => p.qty_on_hand <= p.reorder_at)
-  const urgentEq      = eq.filter(e => getServiceStatus(e.next_due) !== 'ok').slice(0, 5)
+  const urgentEq      = eq.filter(e => computeService(e).status !== 'ok').slice(0, 5)
 
   const metrics = [
     { label: 'Equipment',    value: eq.length,           color: 'text-[var(--color-text-primary)]' },
@@ -82,13 +82,16 @@ export default async function DashboardPage() {
             <tbody>
               {urgentEq.length === 0 ? (
                 <tr><td colSpan={3} className="text-center text-[var(--color-text-secondary)] py-3">All up to date</td></tr>
-              ) : urgentEq.map(e => (
+              ) : urgentEq.map(e => {
+                const svc = computeService(e)
+                return (
                 <tr key={e.id} className="hover:bg-[var(--color-background-secondary)]">
                   <td className="py-2 pr-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</td>
-                  <td className="py-2 pr-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{e.next_due}</td>
-                  <td className="py-2 border-b border-[var(--color-border-tertiary)]"><ServiceStatusBadge status={getServiceStatus(e.next_due)} /></td>
+                  <td className="py-2 pr-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{svc.label}</td>
+                  <td className="py-2 border-b border-[var(--color-border-tertiary)]"><ServiceStatusBadge status={svc.status} /></td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
