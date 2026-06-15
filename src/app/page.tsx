@@ -57,7 +57,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
         {metrics.map(m => (
           <div key={m.label} className="bg-[var(--color-background-secondary)] rounded-[var(--border-radius-md)] p-3">
             <div className="text-[11px] text-[var(--color-text-secondary)] mb-1">{m.label}</div>
@@ -67,7 +67,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Row 1 */}
-      <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 mb-3.5">
         {/* Overdue & due soon */}
         <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] p-4">
           <h3 className="text-[13px] font-medium mb-3.5 text-[var(--color-text-primary)]">Overdue & due soon</h3>
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Row 2 */}
-      <div className="grid grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
         {/* Recent inspections */}
         <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] p-4">
           <h3 className="text-[13px] font-medium mb-3.5 text-[var(--color-text-primary)]">Recent inspections</h3>

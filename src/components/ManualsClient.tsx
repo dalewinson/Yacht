@@ -197,8 +197,8 @@ export default function ManualsClient({
         </div>
 
         {/* Library table */}
-        <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-hidden">
-          <table className="w-full text-[12px] border-collapse table-fixed">
+        <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
+          <table className="w-full min-w-[480px] text-[12px] border-collapse table-fixed">
             <thead>
               <tr>
                 <th className="w-[8%] border-b border-[var(--color-border-tertiary)] pb-[7px] pt-3"></th>

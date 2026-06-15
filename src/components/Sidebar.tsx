@@ -26,7 +26,7 @@ const BOTTOM = [
   { label: 'Settings', href: '/settings', icon: 'ti-settings' },
 ]
 
-export default function Sidebar({ vessels, activeId }: { vessels: VesselLite[]; activeId: string | null }) {
+export default function Sidebar({ vessels, activeId, onNavigate }: { vessels: VesselLite[]; activeId: string | null; onNavigate?: () => void }) {
   const path = usePathname()
 
   function isActive(href: string) {
@@ -53,6 +53,7 @@ export default function Sidebar({ vessels, activeId }: { vessels: VesselLite[]; 
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`flex items-center gap-2 px-4 py-[7px] text-[13px] border-l-2 transition-colors ${
                 isActive(item.href)
                   ? 'text-[#185FA5] border-l-[#185FA5] bg-[#E6F1FB] font-medium'
@@ -71,6 +72,7 @@ export default function Sidebar({ vessels, activeId }: { vessels: VesselLite[]; 
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={`flex items-center gap-2 px-4 py-[7px] text-[13px] border-l-2 transition-colors ${
               isActive(item.href)
                 ? 'text-[#185FA5] border-l-[#185FA5] bg-[#E6F1FB] font-medium'

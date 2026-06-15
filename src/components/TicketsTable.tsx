@@ -50,8 +50,8 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
         <NewTicketButton vesselId={vesselId} onCreated={t => setTickets(prev => [t as Ticket, ...prev])} />
       </div>
 
-      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-hidden">
-        <table className="w-full text-[12px] border-collapse table-fixed">
+      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
+        <table className="w-full min-w-[680px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
               <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] pl-4 pr-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[7%]">#</th>

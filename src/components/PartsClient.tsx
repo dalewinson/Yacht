@@ -76,8 +76,8 @@ export default function PartsClient({
         </button>
       </div>
 
-      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-hidden">
-        <table className="w-full text-[12px] border-collapse table-fixed">
+      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
+        <table className="w-full min-w-[720px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
               <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[24%]">Part</th>

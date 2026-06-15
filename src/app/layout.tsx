@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
-import Sidebar from '@/components/Sidebar'
+import AppShell from '@/components/AppShell'
 import { getVesselContext } from '@/lib/vessel'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -20,11 +20,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
       </head>
       <body className={`${geist.className} h-screen overflow-hidden`} suppressHydrationWarning>
-        <div className="flex h-full bg-[var(--color-background-tertiary)]">
-          <Sidebar vessels={vessels} activeId={activeId} />
-          <main className="flex-1 overflow-y-auto">
+        <div className="h-full bg-[var(--color-background-tertiary)]">
+          <AppShell vessels={vessels} activeId={activeId}>
             {children}
-          </main>
+          </AppShell>
         </div>
       </body>
     </html>
