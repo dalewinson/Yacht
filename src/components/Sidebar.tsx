@@ -16,7 +16,7 @@ const NAV = [
   { label: 'Service log',    href: '/service-log', icon: 'ti-tool' },
   { label: 'Parts',          href: '/parts',       icon: 'ti-package' },
   { section: 'Resources' },
-  { label: 'Crew & contacts',href: '/crew',        icon: 'ti-users' },
+  { label: 'Contacts',       href: '/crew',        icon: 'ti-users' },
   { label: 'Manuals',        href: '/manuals',     icon: 'ti-book' },
   { label: 'Ask the AI',     href: '/ask',         icon: 'ti-message-circle' },
 ]
