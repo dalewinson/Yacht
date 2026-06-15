@@ -13,7 +13,9 @@ export async function getVesselContext(): Promise<{
   active: VesselLite | null
 }> {
   const supabase = await createClient()
-  const { data } = await supabase.from('vessels').select('id, name').order('name')
+  // Order by creation so the default (first) boat is the original one (Patron),
+  // not whatever sorts first alphabetically.
+  const { data } = await supabase.from('vessels').select('id, name').order('created_at', { ascending: true })
   const vessels = (data ?? []) as VesselLite[]
 
   const cookieStore = await cookies()
