@@ -1,3 +1,26 @@
-export default function PartsPage() {
-  return <div className="p-6"><h1 className="text-[17px] font-medium text-[var(--color-text-primary)]">Parts Inventory</h1><p className="text-sm text-[var(--color-text-secondary)] mt-1">Coming soon</p></div>
+import { createClient } from '@/lib/supabase/server'
+import { getVesselContext } from '@/lib/vessel'
+import PartsClient from '@/components/PartsClient'
+import type { Database } from '@/types/database'
+
+type Part = Database['public']['Tables']['parts']['Row']
+
+export default async function PartsPage() {
+  const supabase = await createClient()
+  const { activeId } = await getVesselContext()
+  const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
+
+  const { data } = await supabase.from('parts').select('*').eq('vessel_id', vid).order('name')
+
+  return (
+    <div className="p-6 max-w-[1100px] mx-auto">
+      <div className="mb-5">
+        <h1 className="text-[18px] font-semibold text-[var(--color-text-primary)]">Parts &amp; Inventory</h1>
+        <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">
+          Spares on hand. Items at or below their reorder level are flagged low.
+        </p>
+      </div>
+      <PartsClient parts={(data ?? []) as Part[]} vesselId={activeId} />
+    </div>
+  )
 }
