@@ -132,8 +132,12 @@ export default async function DashboardPage() {
           {!inspections?.length ? (
             <p className="text-[12px] text-[var(--color-text-secondary)]">No inspections recorded yet.</p>
           ) : inspections.map(insp => {
-            const sections = insp.sections as Record<string, { items: { flagged?: boolean }[] }>
-            const flags = Object.values(sections).reduce((n, s) => n + (s.items?.filter(i => i.flagged).length ?? 0), 0)
+            // sections is { [sectionId]: { items: { [itemName]: { ok?: boolean } } } }
+            const sections = (insp.sections ?? {}) as Record<string, { items?: Record<string, { ok?: boolean }> }>
+            const flags = Object.values(sections).reduce((n, sec) => {
+              const items = sec?.items ?? {}
+              return n + Object.values(items).filter(it => it && it.ok === false).length
+            }, 0)
             return (
               <div key={insp.id} className="flex items-center justify-between py-2 border-b border-[var(--color-border-tertiary)] last:border-0">
                 <div>
