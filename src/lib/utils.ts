@@ -53,6 +53,49 @@ export function computeService(
   return { status: getServiceStatus(next, opts?.leadDays), label: fmtDate(next) }
 }
 
+// ─── Service tasks ───────────────────────────────────────────────────────────
+export interface TaskLike {
+  name: string
+  interval_type: IntervalType
+  interval_value: number
+  last_done_date: string | null
+  last_done_hours: number | null
+}
+
+const STATUS_RANK: Record<ServiceStatus, number> = { overdue: 2, due: 1, ok: 0 }
+
+// Status of a single task. Hours-based tasks measure against the parent
+// equipment's live current_hours.
+export function computeTask(task: TaskLike, currentHours: number | null): ServiceInfo {
+  if (task.interval_type === 'hours') {
+    if (currentHours == null) return { status: 'ok', label: 'Set current hours' }
+    if (task.last_done_hours == null) return { status: 'ok', label: 'Set baseline hrs' }
+    const remaining = task.interval_value - (currentHours - task.last_done_hours)
+    const lead = Math.max(10, Math.round(task.interval_value * 0.1))
+    const status: ServiceStatus = remaining <= 0 ? 'overdue' : remaining <= lead ? 'due' : 'ok'
+    return { status, label: remaining <= 0 ? `Overdue ${Math.abs(remaining)} hrs` : `In ${remaining} hrs` }
+  }
+  if (!task.last_done_date) return { status: 'ok', label: 'Not set' }
+  const next = addMonths(task.last_done_date, task.interval_value)
+  return { status: getServiceStatus(next), label: fmtDate(next) }
+}
+
+// Roll a set of tasks up to a single equipment status (worst task wins).
+export function rollupTasks(tasks: TaskLike[], currentHours: number | null): ServiceInfo & { taskCount: number } {
+  if (!tasks.length) return { status: 'ok', label: 'No tasks', taskCount: 0 }
+  let worst: ServiceInfo = { status: 'ok', label: '' }
+  let worstName = ''
+  let chosen = false
+  for (const t of tasks) {
+    const info = computeTask(t, currentHours)
+    if (!chosen || STATUS_RANK[info.status] > STATUS_RANK[worst.status]) {
+      worst = info; worstName = t.name; chosen = true
+    }
+  }
+  const label = worst.status === 'ok' ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''} · all OK` : `${worstName}: ${worst.label}`
+  return { status: worst.status, label, taskCount: tasks.length }
+}
+
 export function fmtDate(iso: string | null) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })

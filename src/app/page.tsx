@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
-import { computeService, fmtDate } from '@/lib/utils'
+import { rollupTasks, fmtDate, type TaskLike } from '@/lib/utils'
 import ServiceStatusBadge from '@/components/ServiceStatusBadge'
 import StatusBadge from '@/components/StatusBadge'
 import PriorityBadge from '@/components/PriorityBadge'
@@ -18,27 +18,32 @@ export default async function DashboardPage() {
   const { activeId } = await getVesselContext()
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const { data: equipmentRaw } = await supabase.from('equipment').select('*').eq('vessel_id', vid).order('next_due')
+  const { data: equipmentRaw } = await supabase.from('equipment').select('*').eq('vessel_id', vid).order('name')
   const { data: ticketsRaw }   = await supabase.from('tickets').select('*, vessels(name)').eq('vessel_id', vid).order('created_at', { ascending: false })
   const { data: partsRaw }     = await supabase.from('parts').select('*').eq('vessel_id', vid)
+  const { data: tasksRaw }     = await (supabase as any).from('service_tasks').select('*').eq('vessel_id', vid)
   const { data: inspectionsRaw } = await supabase.from('inspections').select('*').eq('vessel_id', vid).order('created_at', { ascending: false }).limit(3)
 
   const equipment   = (equipmentRaw   ?? []) as Equipment[]
   const tickets     = (ticketsRaw     ?? []) as (Ticket & { vessels: { name: string } | null })[]
   const parts       = (partsRaw       ?? []) as Part[]
+  const tasks       = (tasksRaw       ?? []) as (TaskLike & { equipment_id: string })[]
   const inspections = (inspectionsRaw ?? []) as Inspection[]
 
-  const eq = equipment
+  const tasksByEq: Record<string, TaskLike[]> = {}
+  for (const t of tasks) (tasksByEq[t.equipment_id] ??= []).push(t)
+  const eqRoll = (e: Equipment) => rollupTasks(tasksByEq[e.id] ?? [], e.current_hours)
+
   const tk = tickets
   const pt = parts
 
-  const overdueCount  = eq.filter(e => computeService(e).status === 'overdue').length
+  const overdueCount  = equipment.filter(e => eqRoll(e).status === 'overdue').length
   const openTickets   = tk.filter(t => t.status !== 'closed' && t.status !== 'resolved')
   const lowParts      = pt.filter(p => p.qty_on_hand <= p.reorder_at)
-  const urgentEq      = eq.filter(e => computeService(e).status !== 'ok').slice(0, 5)
+  const urgentEq      = equipment.filter(e => eqRoll(e).status !== 'ok').slice(0, 5)
 
   const metrics = [
-    { label: 'Equipment',    value: eq.length,           color: 'text-[var(--color-text-primary)]' },
+    { label: 'Equipment',    value: equipment.length,    color: 'text-[var(--color-text-primary)]' },
     { label: 'Overdue',      value: overdueCount,        color: overdueCount > 0 ? 'text-[#A32D2D]' : 'text-[var(--color-text-primary)]' },
     { label: 'Open tickets', value: openTickets.length,  color: openTickets.length > 0 ? 'text-[#854F0B]' : 'text-[var(--color-text-primary)]' },
     { label: 'Parts low',    value: lowParts.length,     color: lowParts.length > 0 ? 'text-[#854F0B]' : 'text-[#3B6D11]' },
@@ -83,7 +88,7 @@ export default async function DashboardPage() {
               {urgentEq.length === 0 ? (
                 <tr><td colSpan={3} className="text-center text-[var(--color-text-secondary)] py-3">All up to date</td></tr>
               ) : urgentEq.map(e => {
-                const svc = computeService(e)
+                const svc = eqRoll(e)
                 return (
                 <tr key={e.id} className="hover:bg-[var(--color-background-secondary)]">
                   <td className="py-2 pr-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</td>

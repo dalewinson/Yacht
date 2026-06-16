@@ -2,28 +2,32 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { fmtDate, addMonths } from '@/lib/utils'
+import { fmtDate } from '@/lib/utils'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type ServiceLog = Database['public']['Tables']['service_log']['Row']
+type Task = Database['public']['Tables']['service_tasks']['Row']
 
 export default function ServiceLogClient({
   entries: initial,
-  equipment: initialEquip,
+  equipment,
+  tasks,
   vesselId,
 }: {
   entries: ServiceLog[]
   equipment: Equipment[]
+  tasks: Task[]
   vesselId: string | null
 }) {
   const [entries, setEntries] = useState<ServiceLog[]>(initial)
-  const [equipment, setEquipment] = useState<Equipment[]>(initialEquip)
   const [showNew, setShowNew] = useState(false)
 
-  function handleCreated(entry: ServiceLog, updatedEquip: Equipment | null) {
+  const tasksByEq: Record<string, Task[]> = {}
+  for (const t of tasks) (tasksByEq[t.equipment_id] ??= []).push(t)
+
+  function handleCreated(entry: ServiceLog) {
     setEntries(prev => [entry, ...prev])
-    if (updatedEquip) setEquipment(prev => prev.map(e => e.id === updatedEquip.id ? updatedEquip : e))
     setShowNew(false)
   }
 
@@ -89,6 +93,7 @@ export default function ServiceLogClient({
         <LogServiceModal
           vesselId={vesselId}
           equipment={equipment}
+          tasksByEq={tasksByEq}
           onClose={() => setShowNew(false)}
           onCreated={handleCreated}
         />
@@ -98,12 +103,13 @@ export default function ServiceLogClient({
 }
 
 function LogServiceModal({
-  vesselId, equipment, onClose, onCreated,
+  vesselId, equipment, tasksByEq, onClose, onCreated,
 }: {
   vesselId: string
   equipment: Equipment[]
+  tasksByEq: Record<string, Task[]>
   onClose: () => void
-  onCreated: (entry: ServiceLog, updatedEquip: Equipment | null) => void
+  onCreated: (entry: ServiceLog) => void
 }) {
   const today = new Date().toISOString().slice(0, 10)
   const [equipmentId, setEquipmentId] = useState('')
@@ -114,20 +120,22 @@ function LogServiceModal({
   const [cost, setCost]               = useState('')
   const [parts, setParts]             = useState('')
   const [notes, setNotes]             = useState('')
-  const [resetCountdown, setReset]    = useState(true)
+  const [completed, setCompleted]     = useState<Set<string>>(new Set())
+  const [currentHours, setCurrentHours] = useState('')
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
 
   const selected = equipment.find(e => e.id === equipmentId) ?? null
-  const isHours = selected?.interval_type === 'hours'
-  const hasInterval = !!(selected?.interval_type && selected?.interval_value)
-  const [hoursAtService, setHoursAtService] = useState('')
+  const eqTasks = selected ? (tasksByEq[selected.id] ?? []) : []
 
-  // default the hours field to the equipment's current reading when picked
   function pickEquipment(id: string) {
     setEquipmentId(id)
     const eq = equipment.find(e => e.id === id)
-    setHoursAtService(eq?.current_hours?.toString() ?? '')
+    setCurrentHours(eq?.current_hours?.toString() ?? '')
+    setCompleted(new Set())
+  }
+  function toggleTask(id: string) {
+    setCompleted(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
   async function save(ev: React.FormEvent) {
@@ -154,24 +162,25 @@ function LogServiceModal({
 
     if (e1) { setError(e1.message); setSaving(false); return }
 
-    // Optionally reset the equipment's maintenance countdown.
-    let updatedEquip: Equipment | null = null
-    if (selected && hasInterval && resetCountdown) {
+    const hrs = currentHours ? parseInt(currentHours) : selected?.current_hours ?? null
+
+    // Update the equipment's current hours if provided.
+    if (selected && currentHours) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const patch: any = { last_service: date }
-      if (isHours) {
-        const h = hoursAtService ? parseInt(hoursAtService) : selected.current_hours
-        patch.last_service_hours = h
-        patch.current_hours = h
-      } else if (selected.interval_value) {
-        patch.next_due = addMonths(date, selected.interval_value)
-      }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: eqData } = await (supabase as any).from('equipment').update(patch).eq('id', selected.id).select().single()
-      updatedEquip = (eqData as Equipment) ?? null
+      await (supabase as any).from('equipment').update({ current_hours: parseInt(currentHours) }).eq('id', selected.id)
     }
 
-    onCreated(entry as ServiceLog, updatedEquip)
+    // Reset the clock on each task this service completed.
+    for (const t of eqTasks) {
+      if (!completed.has(t.id)) continue
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const patch: any = { last_done_date: date }
+      if (t.interval_type === 'hours' && hrs != null) patch.last_done_hours = hrs
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('service_tasks').update(patch).eq('id', t.id)
+    }
+
+    onCreated(entry as ServiceLog)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -214,15 +223,21 @@ function LogServiceModal({
           {field('Parts used', <input type="text" value={parts} onChange={e => setParts(e.target.value)} placeholder="e.g. 2x oil filter, 8qt oil" className={cls} />)}
           {field('Notes', <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${cls} resize-y`} />)}
 
-          {hasInterval && (
+          {selected && eqTasks.length > 0 && (
             <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3 bg-[var(--color-background-secondary)] space-y-2">
-              <label className="flex items-center gap-2 text-[12px] text-[var(--color-text-primary)] cursor-pointer">
-                <input type="checkbox" checked={resetCountdown} onChange={e => setReset(e.target.checked)} />
-                Reset {selected!.name}&apos;s service countdown to this date
-              </label>
-              {isHours && resetCountdown && field('Engine hours at this service',
-                <input type="number" min="0" value={hoursAtService} onChange={e => setHoursAtService(e.target.value)} placeholder="e.g. 2404" className={cls} />
+              <div className="text-[11px] font-medium text-[var(--color-text-primary)]">This service completed:</div>
+              <div className="space-y-1">
+                {eqTasks.map(t => (
+                  <label key={t.id} className="flex items-center gap-2 text-[12px] text-[var(--color-text-primary)] cursor-pointer">
+                    <input type="checkbox" checked={completed.has(t.id)} onChange={() => toggleTask(t.id)} />
+                    {t.name} <span className="text-[10px] text-[var(--color-text-tertiary)]">(every {t.interval_value} {t.interval_type === 'hours' ? 'hrs' : 'mo'})</span>
+                  </label>
+                ))}
+              </div>
+              {[...completed].some(id => eqTasks.find(t => t.id === id)?.interval_type === 'hours') && field('Current hours (resets hours-based tasks)',
+                <input type="number" min="0" value={currentHours} onChange={e => setCurrentHours(e.target.value)} placeholder="e.g. 2480" className={cls} />
               )}
+              <p className="text-[10px] text-[var(--color-text-tertiary)]">Checking a task resets its countdown to this date{currentHours ? '/hours' : ''}.</p>
             </div>
           )}
 

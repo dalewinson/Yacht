@@ -27,6 +27,11 @@ export interface Database {
         Insert: { id?: string; vessel_id: string; section_id: string; item_key?: string; equipment_id?: string | null }
         Update: { equipment_id?: string | null }
       }
+      service_tasks: {
+        Row: { id: string; equipment_id: string; vessel_id: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date: string | null; last_done_hours: number | null; notes: string | null; created_at: string }
+        Insert: { id?: string; equipment_id: string; vessel_id?: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
+        Update: { name?: string; interval_type?: 'hours' | 'months'; interval_value?: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
+      }
       equipment: {
         Row: { id: string; vessel_id: string; name: string; category: string; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; last_inspected: string | null; assigned_tech: string | null; notes: string | null; created_at: string }
         Insert: { id?: string; vessel_id: string; name: string; category: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }

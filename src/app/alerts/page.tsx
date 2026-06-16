@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
-import { computeService } from '@/lib/utils'
+import { computeTask, type TaskLike } from '@/lib/utils'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type Part = Database['public']['Tables']['parts']['Row']
 type Ticket = Database['public']['Tables']['tickets']['Row']
+type Task = Database['public']['Tables']['service_tasks']['Row']
 
 type Alert = { severity: 'high' | 'med'; title: string; detail: string; href: string; icon: string }
 
@@ -15,21 +16,26 @@ export default async function AlertsPage() {
   const { activeId } = await getVesselContext()
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const [{ data: eqRaw }, { data: partsRaw }, { data: tkRaw }] = await Promise.all([
+  const [{ data: eqRaw }, { data: partsRaw }, { data: tkRaw }, { data: tasksRaw }] = await Promise.all([
     supabase.from('equipment').select('*').eq('vessel_id', vid),
     supabase.from('parts').select('*').eq('vessel_id', vid),
     supabase.from('tickets').select('*').eq('vessel_id', vid),
+    (supabase as any).from('service_tasks').select('*').eq('vessel_id', vid),
   ])
   const equipment = (eqRaw ?? []) as Equipment[]
   const parts = (partsRaw ?? []) as Part[]
   const tickets = (tkRaw ?? []) as Ticket[]
+  const tasks = (tasksRaw ?? []) as Task[]
 
+  const eqById = new Map(equipment.map(e => [e.id, e]))
   const alerts: Alert[] = []
 
-  for (const e of equipment) {
-    const svc = computeService(e)
-    if (svc.status === 'overdue') alerts.push({ severity: 'high', title: `${e.name} — service overdue`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
-    else if (svc.status === 'due') alerts.push({ severity: 'med', title: `${e.name} — service due soon`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
+  for (const t of tasks) {
+    const eq = eqById.get(t.equipment_id)
+    if (!eq) continue
+    const svc = computeTask(t as TaskLike, eq.current_hours)
+    if (svc.status === 'overdue') alerts.push({ severity: 'high', title: `${eq.name} — ${t.name} overdue`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
+    else if (svc.status === 'due') alerts.push({ severity: 'med', title: `${eq.name} — ${t.name} due soon`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
   }
 
   for (const t of tickets) {

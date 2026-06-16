@@ -10,9 +10,10 @@ export default async function ServiceLogPage() {
   const { activeId } = await getVesselContext()
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const [{ data: logRaw }, { data: equipRaw }] = await Promise.all([
+  const [{ data: logRaw }, { data: equipRaw }, { data: tasksRaw }] = await Promise.all([
     (supabase as any).from('service_log').select('*').eq('vessel_id', vid).order('date', { ascending: false }),
     supabase.from('equipment').select('*').eq('vessel_id', vid).order('name'),
+    (supabase as any).from('service_tasks').select('*').eq('vessel_id', vid),
   ])
 
   return (
@@ -26,6 +27,7 @@ export default async function ServiceLogPage() {
       <ServiceLogClient
         entries={(logRaw ?? []) as any[]}
         equipment={(equipRaw ?? []) as Equipment[]}
+        tasks={(tasksRaw ?? []) as any[]}
         vesselId={activeId}
       />
     </div>
