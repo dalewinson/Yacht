@@ -1,46 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
-import twilio from 'twilio'
+import plivo from 'plivo'
 import { createServiceClient } from '@/lib/supabase/server'
 
 export const maxDuration = 60
 
-// Twilio posts application/x-www-form-urlencoded. We create a ticket on the boat
-// whose owner_phone matches the sender, capture any MMS photos, and text back a
-// confirmation.
+// Plivo posts application/x-www-form-urlencoded for inbound messages.
+// Params: From, To, Text, Type ('sms'|'mms'), MessageUUID, and Media0..MediaN for MMS.
 export async function POST(req: NextRequest) {
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
+  const authId = process.env.PLIVO_AUTH_ID
+  const authToken = process.env.PLIVO_AUTH_TOKEN
 
   const form = await req.formData()
   const params: Record<string, string> = {}
   for (const [k, v] of form.entries()) params[k] = typeof v === 'string' ? v : ''
 
-  // Verify the request really came from Twilio.
+  // Verify the request came from Plivo (V3 signature).
   if (authToken) {
-    const sig = req.headers.get('x-twilio-signature') ?? ''
+    const sig = req.headers.get('x-plivo-signature-v3') ?? ''
+    const nonce = req.headers.get('x-plivo-signature-v3-nonce') ?? ''
     const proto = req.headers.get('x-forwarded-proto') ?? 'https'
     const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? ''
-    const url = `${proto}://${host}/api/sms`
-    const valid = twilio.validateRequest(authToken, sig, url, params)
+    const url = `${proto}://${host}/api/plivo`
+    let valid = false
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      valid = (plivo as any).validateV3Signature('POST', url, nonce, authToken, sig, params)
+    } catch {
+      valid = false
+    }
     if (!valid) return new NextResponse('Invalid signature', { status: 403 })
   }
 
   const from = params.From ?? ''
-  const body = (params.Body ?? '').trim()
-  const numMedia = parseInt(params.NumMedia ?? '0', 10) || 0
+  const body = (params.Text ?? '').trim()
 
   const supabase = await createServiceClient()
 
-  // Route to the boat whose owner_phone matches the sender; fall back to first vessel.
-  const { data: vesselsRaw } = await supabase.from('vessels').select('id, name, owner_phone').order('name')
+  const { data: vesselsRaw } = await supabase.from('vessels').select('id, name, owner_phone').order('created_at')
   const vessels = (vesselsRaw ?? []) as { id: string; name: string; owner_phone: string | null }[]
-  if (!vessels.length) return twiml('No boats are set up yet.')
+  if (!vessels.length) return plivoReply(params, 'No boats are set up yet.')
 
   const digits = (s: string) => (s || '').replace(/\D/g, '').slice(-10)
   const fromDigits = digits(from)
   const matched = vessels.find((v) => digits(v.owner_phone ?? '') === fromDigits) ?? vessels[0]
 
-  const title = (body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${from || 'unknown'}`)
+  const title = body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${from || 'unknown'}`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: ticket, error: tErr } = await (supabase as any).from('tickets').insert({
@@ -52,21 +56,20 @@ export async function POST(req: NextRequest) {
     reported_by: from || null,
   }).select().single()
 
-  if (tErr || !ticket) return twiml('Sorry — could not log your report. Please try again.')
+  if (tErr || !ticket) return plivoReply(params, 'Sorry — could not log your report. Please try again.')
 
-  // Capture MMS media.
+  // Capture MMS media (Media0, Media1, ... up to 10).
   let saved = 0
-  for (let i = 0; i < numMedia; i++) {
-    const mediaUrl = params[`MediaUrl${i}`]
-    const ctype = params[`MediaContentType${i}`] || 'application/octet-stream'
+  for (let i = 0; i < 10; i++) {
+    const mediaUrl = params[`Media${i}`]
     if (!mediaUrl) continue
     try {
       const headers: Record<string, string> = {}
-      if (accountSid && authToken) {
-        headers.Authorization = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64')
-      }
-      const res = await fetch(mediaUrl, { headers })
+      if (authId && authToken) headers.Authorization = 'Basic ' + Buffer.from(`${authId}:${authToken}`).toString('base64')
+      let res = await fetch(mediaUrl, { headers })
+      if (!res.ok) res = await fetch(mediaUrl) // some media URLs are public
       if (!res.ok) continue
+      const ctype = res.headers.get('content-type') || 'application/octet-stream'
       const bytes = new Uint8Array(await res.arrayBuffer())
       const ext = ctype.split('/')[1]?.split(';')[0] || 'bin'
       const path = `${ticket.id}/${i}.${ext}`
@@ -81,11 +84,15 @@ export async function POST(req: NextRequest) {
   }
 
   const mediaNote = saved > 0 ? ` (${saved} photo${saved > 1 ? 's' : ''} attached)` : ''
-  return twiml(`Got it — logged a ticket for ${matched.name}${mediaNote}. Thank you!`)
+  return plivoReply(params, `Got it — logged a ticket for ${matched.name}${mediaNote}. Thank you!`)
 }
 
-function twiml(message: string) {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${escapeXml(message)}</Message></Response>`
+// Plivo Messaging XML reply: src = our Plivo number (inbound To), dst = sender (From).
+function plivoReply(params: Record<string, string>, message: string) {
+  const src = params.To ?? ''
+  const dst = params.From ?? ''
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?><Response><Message src="${escapeXml(src)}" dst="${escapeXml(dst)}">${escapeXml(message)}</Message></Response>`
   return new NextResponse(xml, { status: 200, headers: { 'Content-Type': 'text/xml' } })
 }
 
