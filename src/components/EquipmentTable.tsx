@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { computeService, addMonths, type IntervalType } from '@/lib/utils'
+import { computeService, addMonths, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
 import type { Database } from '@/types/database'
 
@@ -200,6 +200,9 @@ function EquipmentEditModal({ equipment: e, onClose, onSaved }: {
             {field('Assigned tech', textInput(assignedTech, setAssignedTech))}
             {field('Last serviced (date)',
               <input type="date" value={lastService} onChange={e => setLastService(e.target.value)} className={cls} />
+            )}
+            {field('Last inspected',
+              <input type="text" readOnly value={e.last_inspected ? fmtDate(e.last_inspected) : 'Not yet'} className={`${cls} text-[var(--color-text-secondary)]`} />
             )}
           </div>
 

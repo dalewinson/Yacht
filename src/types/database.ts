@@ -13,19 +13,24 @@ export interface Database {
         Update: { id?: string; name?: string; owner_name?: string; owner_phone?: string; notes?: string | null }
       }
       tickets: {
-        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null; reported_by?: string | null }
-        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null; reported_by?: string | null }
+        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; inspection_ref: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null; reported_by?: string | null; inspection_ref?: string | null }
+        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null; reported_by?: string | null; inspection_ref?: string | null }
       }
       ticket_attachments: {
         Row: { id: string; ticket_id: string; storage_path: string; content_type: string | null; created_at: string }
         Insert: { id?: string; ticket_id: string; storage_path: string; content_type?: string | null }
         Update: { content_type?: string | null }
       }
+      inspection_links: {
+        Row: { id: string; vessel_id: string; section_id: string; item_key: string; equipment_id: string | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; section_id: string; item_key?: string; equipment_id?: string | null }
+        Update: { equipment_id?: string | null }
+      }
       equipment: {
-        Row: { id: string; vessel_id: string; name: string; category: string; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; assigned_tech: string | null; notes: string | null; created_at: string }
-        Insert: { id?: string; vessel_id: string; name: string; category: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; assigned_tech?: string | null; notes?: string | null }
-        Update: { name?: string; category?: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; assigned_tech?: string | null; notes?: string | null }
+        Row: { id: string; vessel_id: string; name: string; category: string; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; last_inspected: string | null; assigned_tech: string | null; notes: string | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; name: string; category: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
+        Update: { name?: string; category?: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
       }
       service_log: {
         Row: { id: string; vessel_id: string; equipment_id: string | null; equipment_name: string; date: string; work_performed: string; tech: string | null; cost: number | null; parts_used: string | null; notes: string | null; created_at: string }

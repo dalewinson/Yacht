@@ -7,8 +7,11 @@ export default async function InspectionsPage() {
   const { active, activeId } = await getVesselContext()
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const { data: inspectionsRaw } = await (supabase as any)
-    .from('inspections').select('*').eq('vessel_id', vid).order('date', { ascending: false })
+  const [{ data: inspectionsRaw }, { data: equipRaw }, { data: linksRaw }] = await Promise.all([
+    (supabase as any).from('inspections').select('*').eq('vessel_id', vid).order('date', { ascending: false }),
+    supabase.from('equipment').select('id, name, category').eq('vessel_id', vid).order('name'),
+    (supabase as any).from('inspection_links').select('section_id, item_key, equipment_id').eq('vessel_id', vid),
+  ])
   const vessels = active ? [active] : []
 
   return (
@@ -22,6 +25,8 @@ export default async function InspectionsPage() {
       <InspectionsClient
         vessels={(vessels ?? []) as { id: string; name: string }[]}
         inspections={(inspectionsRaw ?? []) as any[]}
+        equipment={(equipRaw ?? []) as { id: string; name: string; category: string }[]}
+        links={(linksRaw ?? []) as { section_id: string; item_key: string; equipment_id: string | null }[]}
       />
     </div>
   )
