@@ -10,6 +10,7 @@ const NAV = [
   { label: 'Dashboard',      href: '/',            icon: 'ti-layout-dashboard' },
   { label: 'Equipment',      href: '/equipment',   icon: 'ti-list-details' },
   { label: 'Tickets',        href: '/tickets',     icon: 'ti-ticket' },
+  { label: 'Logbook',        href: '/logbook',     icon: 'ti-notebook' },
   { label: 'Alerts',         href: '/alerts',      icon: 'ti-bell' },
   { section: 'Maintenance' },
   { label: 'Inspections',    href: '/inspections', icon: 'ti-clipboard-check' },

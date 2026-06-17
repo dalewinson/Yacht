@@ -27,6 +27,11 @@ export interface Database {
         Insert: { id?: string; vessel_id: string; section_id: string; item_key?: string; equipment_id?: string | null }
         Update: { equipment_id?: string | null }
       }
+      trips: {
+        Row: { id: string; vessel_id: string | null; date: string; captain: string | null; purpose: string | null; cruise_area: string | null; sky: string | null; wind_speed: number | null; wind_dir: string | null; port_engine_start: number | null; port_engine_end: number | null; stbd_engine_start: number | null; stbd_engine_end: number | null; gen_equipment_id: string | null; gen_start: number | null; gen_end: number | null; fuel_start: number | null; fuel_end: number | null; timeline: { time: string; label: string }[]; notes: string | null; created_at: string }
+        Insert: { id?: string; vessel_id?: string | null; date: string; captain?: string | null; purpose?: string | null; cruise_area?: string | null; sky?: string | null; wind_speed?: number | null; wind_dir?: string | null; port_engine_start?: number | null; port_engine_end?: number | null; stbd_engine_start?: number | null; stbd_engine_end?: number | null; gen_equipment_id?: string | null; gen_start?: number | null; gen_end?: number | null; fuel_start?: number | null; fuel_end?: number | null; timeline?: { time: string; label: string }[]; notes?: string | null }
+        Update: Partial<{ date: string; captain: string | null; purpose: string | null; cruise_area: string | null; sky: string | null; wind_speed: number | null; wind_dir: string | null; port_engine_start: number | null; port_engine_end: number | null; stbd_engine_start: number | null; stbd_engine_end: number | null; gen_equipment_id: string | null; gen_start: number | null; gen_end: number | null; fuel_start: number | null; fuel_end: number | null; timeline: { time: string; label: string }[]; notes: string | null }>
+      }
       sms_optins: {
         Row: { phone: string; full_from: string | null; opted_in: boolean; opted_in_at: string | null; created_at: string }
         Insert: { phone: string; full_from?: string | null; opted_in?: boolean; opted_in_at?: string | null }
