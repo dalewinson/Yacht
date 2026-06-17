@@ -48,9 +48,9 @@ export interface Database {
         Update: { equipment_name?: string; date?: string; work_performed?: string; tech?: string | null; cost?: number | null; parts_used?: string | null; notes?: string | null }
       }
       parts: {
-        Row: { id: string; vessel_id: string; name: string; category: string; equipment_name: string | null; part_number: string | null; qty_on_hand: number; reorder_at: number; supplier: string | null; unit_cost: number | null; created_at: string }
-        Insert: { id?: string; vessel_id: string; name: string; category: string; equipment_name?: string | null; part_number?: string | null; qty_on_hand?: number; reorder_at?: number; supplier?: string | null; unit_cost?: number | null }
-        Update: { name?: string; category?: string; equipment_name?: string | null; part_number?: string | null; qty_on_hand?: number; reorder_at?: number; supplier?: string | null; unit_cost?: number | null }
+        Row: { id: string; vessel_id: string; name: string; category: string; equipment_name: string | null; part_number: string | null; location: string | null; qty_on_hand: number; reorder_at: number; supplier: string | null; unit_cost: number | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; name: string; category: string; equipment_name?: string | null; part_number?: string | null; location?: string | null; qty_on_hand?: number; reorder_at?: number; supplier?: string | null; unit_cost?: number | null }
+        Update: { name?: string; category?: string; equipment_name?: string | null; part_number?: string | null; location?: string | null; qty_on_hand?: number; reorder_at?: number; supplier?: string | null; unit_cost?: number | null }
       }
       crew: {
         Row: { id: string; vessel_id: string; name: string; role: CrewRole; phone: string | null; email: string | null; specialty: string | null; notes: string | null; avatar_color: string; avatar_bg: string; created_at: string }

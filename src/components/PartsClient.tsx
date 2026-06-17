@@ -27,7 +27,7 @@ export default function PartsClient({
   const filtered = parts.filter(p => {
     const q = search.toLowerCase()
     return (
-      (!q || p.name.toLowerCase().includes(q) || (p.part_number ?? '').toLowerCase().includes(q) || (p.equipment_name ?? '').toLowerCase().includes(q)) &&
+      (!q || p.name.toLowerCase().includes(q) || (p.part_number ?? '').toLowerCase().includes(q) || (p.equipment_name ?? '').toLowerCase().includes(q) || (p.location ?? '').toLowerCase().includes(q)) &&
       (!category || p.category === category) &&
       (!lowOnly || isLow(p))
     )
@@ -77,20 +77,21 @@ export default function PartsClient({
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[720px] text-[12px] border-collapse table-fixed">
+        <table className="w-full min-w-[820px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[24%]">Part</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Equipment</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Part #</th>
-              <th className="text-center font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[18%]">On hand</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Supplier</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Cost</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[22%]">Part</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Equipment</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Location</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Part #</th>
+              <th className="text-center font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">On hand</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Supplier</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[8%]">Cost</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-8">No parts {parts.length ? 'match your filter' : 'yet — click "Add part"'}.</td></tr>
+              <tr><td colSpan={7} className="text-center text-[var(--color-text-secondary)] py-8">No parts {parts.length ? 'match your filter' : 'yet — click "Add part"'}.</td></tr>
             ) : filtered.map(p => (
               <tr key={p.id} className={isLow(p) ? 'bg-[#FBF3E5]' : 'hover:bg-[var(--color-background-secondary)]'}>
                 <td className="px-4 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -98,6 +99,7 @@ export default function PartsClient({
                   <span className="block text-[10px] text-[var(--color-text-tertiary)]">{p.category}</span>
                 </td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.equipment_name ?? '—'}</td>
+                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.location ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.part_number ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
                   <div className="flex items-center justify-center gap-1.5">
@@ -144,6 +146,7 @@ function PartModal({
   const [category, setCategory]   = useState(part?.category ?? 'Propulsion')
   const [equipmentName, setEquip] = useState(part?.equipment_name ?? '')
   const [partNumber, setPartNum]  = useState(part?.part_number ?? '')
+  const [location, setLocation]   = useState(part?.location ?? '')
   const [qty, setQty]             = useState(part?.qty_on_hand?.toString() ?? '0')
   const [reorderAt, setReorder]   = useState(part?.reorder_at?.toString() ?? '0')
   const [supplier, setSupplier]   = useState(part?.supplier ?? '')
@@ -160,6 +163,7 @@ function PartModal({
       name: name.trim(), category,
       equipment_name: equipmentName.trim() || null,
       part_number: partNumber.trim() || null,
+      location: location.trim() || null,
       qty_on_hand: parseInt(qty) || 0,
       reorder_at: parseInt(reorderAt) || 0,
       supplier: supplier.trim() || null,
@@ -207,6 +211,7 @@ function PartModal({
               </select>
             )}
             {field('For equipment', <input type="text" value={equipmentName} onChange={e => setEquip(e.target.value)} placeholder="e.g. Port engine" className={cls} />)}
+            {field('Location', <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Engine room, port locker" className={cls} />)}
             {field('Part #', <input type="text" value={partNumber} onChange={e => setPartNum(e.target.value)} className={cls} />)}
             {field('Qty on hand', <input type="number" min="0" value={qty} onChange={e => setQty(e.target.value)} className={cls} />)}
             {field('Reorder at', <input type="number" min="0" value={reorderAt} onChange={e => setReorder(e.target.value)} className={cls} />)}
