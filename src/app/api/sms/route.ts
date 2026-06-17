@@ -27,18 +27,51 @@ export async function POST(req: NextRequest) {
 
   const from = params.From ?? ''
   const body = (params.Body ?? '').trim()
+  const msg = body.toUpperCase()
   const numMedia = parseInt(params.NumMedia ?? '0', 10) || 0
 
   const supabase = await createServiceClient()
+
+  const digitsOf = (s: string) => (s || '').replace(/\D/g, '').slice(-10)
+  const fromDigits = digitsOf(from)
+
+  // Carrier opt-out/help keywords are handled by Twilio automatically — if one
+  // reaches us, don't create a ticket.
+  if (['STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'HELP', 'INFO'].includes(msg)) {
+    return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response/>', { status: 200, headers: { 'Content-Type': 'text/xml' } })
+  }
+
+  // ─── Double opt-in gate ───
+  const OPTIN_WORDS = ['YES', 'START', 'JOIN', 'UNSTOP', 'SUBSCRIBE']
+  const OPTIN_PROMPT = 'Fairwinds maintenance line: reply YES to receive maintenance ticket confirmations for your vessel. About a few msgs/month. Msg & data rates may apply. Reply HELP for help, STOP to opt out.'
+  const OPTIN_CONFIRM = "You're subscribed to Fairwinds maintenance texts. Text a maintenance issue (add a photo if helpful) to log a ticket and we'll reply to confirm. Msg & data rates may apply. Reply STOP to opt out, HELP for help."
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: optin } = await (supabase as any).from('sms_optins').select('opted_in').eq('phone', fromDigits).maybeSingle()
+  const optedIn = !!optin?.opted_in
+
+  if (!optedIn) {
+    if (OPTIN_WORDS.includes(msg)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('sms_optins').upsert({ phone: fromDigits, full_from: from, opted_in: true, opted_in_at: new Date().toISOString() })
+      return twiml(OPTIN_CONFIRM)
+    }
+    // first contact (or not yet confirmed) → prompt to opt in, don't log a ticket
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('sms_optins').upsert({ phone: fromDigits, full_from: from, opted_in: false })
+    return twiml(OPTIN_PROMPT)
+  }
+
+  if (OPTIN_WORDS.includes(msg)) {
+    return twiml("You're already subscribed to Fairwinds maintenance texts. Text a maintenance issue to log a ticket.")
+  }
 
   // Route to the boat whose owner_phone matches the sender; fall back to first vessel.
   const { data: vesselsRaw } = await supabase.from('vessels').select('id, name, owner_phone').order('created_at')
   const vessels = (vesselsRaw ?? []) as { id: string; name: string; owner_phone: string | null }[]
   if (!vessels.length) return twiml('No boats are set up yet.')
 
-  const digits = (s: string) => (s || '').replace(/\D/g, '').slice(-10)
-  const fromDigits = digits(from)
-  const matched = vessels.find((v) => digits(v.owner_phone ?? '') === fromDigits) ?? vessels[0]
+  const matched = vessels.find((v) => digitsOf(v.owner_phone ?? '') === fromDigits) ?? vessels[0]
 
   const title = (body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${from || 'unknown'}`)
 

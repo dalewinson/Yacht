@@ -27,6 +27,11 @@ export interface Database {
         Insert: { id?: string; vessel_id: string; section_id: string; item_key?: string; equipment_id?: string | null }
         Update: { equipment_id?: string | null }
       }
+      sms_optins: {
+        Row: { phone: string; full_from: string | null; opted_in: boolean; opted_in_at: string | null; created_at: string }
+        Insert: { phone: string; full_from?: string | null; opted_in?: boolean; opted_in_at?: string | null }
+        Update: { full_from?: string | null; opted_in?: boolean; opted_in_at?: string | null }
+      }
       service_tasks: {
         Row: { id: string; equipment_id: string; vessel_id: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date: string | null; last_done_hours: number | null; notes: string | null; created_at: string }
         Insert: { id?: string; equipment_id: string; vessel_id?: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
