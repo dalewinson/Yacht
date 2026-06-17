@@ -84,6 +84,13 @@ export default function Sidebar({ vessels, activeId, onNavigate }: { vessels: Ve
             {item.label}
           </Link>
         ))}
+        <button
+          onClick={async () => { await fetch('/api/logout', { method: 'POST' }); window.location.href = '/login' }}
+          className="w-full text-left flex items-center gap-2 px-4 py-[7px] text-[13px] border-l-2 border-l-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+        >
+          <i className="ti ti-logout text-[15px] flex-shrink-0" />
+          Sign out
+        </button>
       </div>
     </aside>
   )
