@@ -20,7 +20,7 @@ const STARTER_TASKS: { name: string; interval_type: IntervalType; interval_value
   { name: 'Zincs / anodes',                interval_type: 'months', interval_value: 3 },
 ]
 
-export default function EquipmentTable({ equipment: initial, tasks: initialTasks }: { equipment: Equipment[]; tasks: Task[] }) {
+export default function EquipmentTable({ equipment: initial, tasks: initialTasks, vesselId }: { equipment: Equipment[]; tasks: Task[]; vesselId: string | null }) {
   const [equipment, setEquipment] = useState(initial)
   const [tasksByEq, setTasksByEq] = useState<Record<string, Task[]>>(() => {
     const m: Record<string, Task[]> = {}
@@ -30,6 +30,14 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState('')
   const [selected, setSelected] = useState<Equipment | null>(null)
+  const [adding, setAdding]     = useState(false)
+
+  function handleAdded(created: Equipment) {
+    setEquipment(prev => [...prev, created])
+    setTasksByEq(prev => ({ ...prev, [created.id]: [] }))
+    setAdding(false)
+    setSelected(created) // open edit so they can add service tasks right away
+  }
 
   const filtered = equipment.filter(e => {
     const q = search.toLowerCase()
@@ -55,6 +63,10 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
           <option value="">All categories</option>
           {CATEGORIES.map(c => <option key={c}>{c}</option>)}
         </select>
+        <button onClick={() => setAdding(true)} disabled={!vesselId}
+          className="inline-flex items-center gap-1.5 px-3 py-[6px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50 whitespace-nowrap">
+          <i className="ti ti-plus text-[13px]" /> Add equipment
+        </button>
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
@@ -103,7 +115,81 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
           onSaved={handleSaved}
         />
       )}
+
+      {adding && vesselId && (
+        <AddEquipmentModal vesselId={vesselId} onClose={() => setAdding(false)} onAdded={handleAdded} />
+      )}
     </>
+  )
+}
+
+function AddEquipmentModal({ vesselId, onClose, onAdded }: {
+  vesselId: string
+  onClose: () => void
+  onAdded: (created: Equipment) => void
+}) {
+  const [name, setName]               = useState('')
+  const [category, setCategory]       = useState('Propulsion')
+  const [model, setModel]             = useState('')
+  const [serial, setSerial]           = useState('')
+  const [currentHours, setCurrentHours] = useState('')
+  const [notes, setNotes]             = useState('')
+  const [saving, setSaving]           = useState(false)
+  const [error, setError]             = useState('')
+
+  async function submit(ev: React.FormEvent) {
+    ev.preventDefault()
+    if (!name.trim()) { setError('Name is required.'); return }
+    setSaving(true); setError('')
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error: err } = await (supabase as any).from('equipment').insert({
+      vessel_id: vesselId,
+      name: name.trim(),
+      category,
+      model: model.trim() || null,
+      serial: serial.trim() || null,
+      current_hours: currentHours ? parseInt(currentHours) : null,
+      notes: notes.trim() || null,
+    }).select().single()
+    if (err) { setError(err.message); setSaving(false); return }
+    onAdded(data as Equipment)
+  }
+
+  const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
+  const field = (label: string, input: React.ReactNode) => (
+    <div><label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">{label}</label>{input}</div>
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/40 p-4">
+      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[460px] p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Add equipment</h2>
+          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
+        </div>
+        <form onSubmit={submit} className="space-y-[10px]">
+          <div className="grid grid-cols-2 gap-[10px]">
+            {field('Name *', <input type="text" value={name} onChange={e => setName(e.target.value)} className={cls} />)}
+            {field('Category',
+              <select value={category} onChange={e => setCategory(e.target.value)} className={cls}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+            )}
+            {field('Make / model', <input type="text" value={model} onChange={e => setModel(e.target.value)} className={cls} />)}
+            {field('Serial #', <input type="text" value={serial} onChange={e => setSerial(e.target.value)} className={cls} />)}
+            {field('Current hours', <input type="number" min="0" value={currentHours} onChange={e => setCurrentHours(e.target.value)} placeholder="if applicable" className={cls} />)}
+          </div>
+          {field('Notes', <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${cls} resize-y`} />)}
+          {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
+          <p className="text-[10px] text-[var(--color-text-tertiary)]">After adding, the edit screen opens so you can set service tasks.</p>
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
+              <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Adding…' : 'Add'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 

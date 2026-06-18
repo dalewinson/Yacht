@@ -17,7 +17,7 @@ export default async function EquipmentPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-[17px] font-medium text-[var(--color-text-primary)]">Equipment</h1>
       </div>
-      <EquipmentTable equipment={equipment ?? []} tasks={(tasks ?? []) as any[]} />
+      <EquipmentTable equipment={equipment ?? []} tasks={(tasks ?? []) as any[]} vesselId={activeId} />
     </div>
   )
 }
