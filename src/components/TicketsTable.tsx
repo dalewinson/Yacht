@@ -31,6 +31,14 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
     if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null)
   }
 
+  async function deleteTicket(id: string) {
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('tickets').delete().eq('id', id)
+    setTickets(prev => prev.filter(t => t.id !== id))
+    setSelected(null)
+  }
+
   return (
     <>
       <div className="flex items-center justify-between mb-3.5">
@@ -90,18 +98,21 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
           ticket={selected}
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
+          onDelete={deleteTicket}
         />
       )}
     </>
   )
 }
 
-function TicketDetail({ ticket: t, onClose, onUpdateStatus }: {
+function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete }: {
   ticket: Ticket
   onClose: () => void
   onUpdateStatus: (id: string, status: TicketStatus) => Promise<void>
+  onDelete: (id: string) => Promise<void>
 }) {
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [status, setStatus] = useState<TicketStatus>(t.status)
 
   async function save() {
@@ -109,6 +120,12 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus }: {
     await onUpdateStatus(t.id, status)
     setSaving(false)
     onClose()
+  }
+
+  async function remove() {
+    if (!confirm('Delete this ticket? This cannot be undone.')) return
+    setDeleting(true)
+    await onDelete(t.id)
   }
 
   return (
@@ -162,24 +179,33 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus }: {
           </>
         )}
 
-        <div className="flex items-center justify-end gap-2 mt-4">
-          <select
-            value={status}
-            onChange={e => setStatus(e.target.value as TicketStatus)}
-            className="text-[12px] px-2 py-[5px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
-          >
-            <option value="open">Open</option>
-            <option value="in_progress">In progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-          </select>
+        <div className="flex items-center justify-between gap-2 mt-4">
           <button
-            onClick={save}
-            disabled={saving}
-            className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50"
+            onClick={remove}
+            disabled={deleting}
+            className="text-[12px] text-[#A32D2D] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
           >
-            <i className="ti ti-check text-[13px]" /> {saving ? 'Saving…' : 'Update'}
+            <i className="ti ti-trash text-[13px]" /> {deleting ? 'Deleting…' : 'Delete'}
           </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={status}
+              onChange={e => setStatus(e.target.value as TicketStatus)}
+              className="text-[12px] px-2 py-[5px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
+            >
+              <option value="open">Open</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50"
+            >
+              <i className="ti ti-check text-[13px]" /> {saving ? 'Saving…' : 'Update'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
