@@ -53,6 +53,12 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
     setSelected(null)
   }
 
+  function handleDeleted(id: string) {
+    setEquipment(prev => prev.filter(e => e.id !== id))
+    setTasksByEq(prev => { const n = { ...prev }; delete n[id]; return n })
+    setSelected(null)
+  }
+
   return (
     <>
       <div className="flex gap-2 mb-3.5">
@@ -113,6 +119,7 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
           tasks={tasksByEq[selected.id] ?? []}
           onClose={() => setSelected(null)}
           onSaved={handleSaved}
+          onDeleted={handleDeleted}
         />
       )}
 
@@ -202,11 +209,12 @@ type TaskRow = {
   last_done_hours: string
 }
 
-function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSaved }: {
+function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSaved, onDeleted }: {
   equipment: Equipment
   tasks: Task[]
   onClose: () => void
   onSaved: (updated: Equipment, tasks: Task[]) => void
+  onDeleted: (id: string) => void
 }) {
   const [name, setName]               = useState(e.name)
   const [category, setCategory]       = useState(e.category)
@@ -288,6 +296,15 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
     }
 
     onSaved(eqData as Equipment, finalTasks)
+  }
+
+  async function handleDelete() {
+    if (!confirm(`Delete "${e.name}" and all its service tasks? This cannot be undone.`)) return
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: err } = await (supabase as any).from('equipment').delete().eq('id', e.id)
+    if (err) { setError(err.message); return }
+    onDeleted(e.id)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -377,11 +394,16 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
 
           {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
 
-          <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white border border-[#185FA5] rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
-              <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
+          <div className="flex justify-between items-center pt-1">
+            <button type="button" onClick={handleDelete} className="text-[12px] text-[#A32D2D] hover:underline inline-flex items-center gap-1">
+              <i className="ti ti-trash text-[13px]" /> Delete
             </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
+              <button type="submit" disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white border border-[#185FA5] rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
+                <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
