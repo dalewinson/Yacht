@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
 import SettingsClient from '@/components/SettingsClient'
+import CategoriesManager from '@/components/CategoriesManager'
 import type { Database } from '@/types/database'
 
 type Vessel = Database['public']['Tables']['vessels']['Row']
+type Category = Database['public']['Tables']['categories']['Row']
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -15,13 +17,18 @@ export default async function SettingsPage() {
     vessel = (data ?? null) as Vessel | null
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: catsRaw } = await (supabase as any).from('categories').select('*').order('sort_order')
+  const categories = (catsRaw ?? []) as Category[]
+
   return (
-    <div className="p-6 max-w-[640px] mx-auto">
-      <div className="mb-5">
+    <div className="p-6 max-w-[640px] mx-auto space-y-6">
+      <div>
         <h1 className="text-[18px] font-semibold text-[var(--color-text-primary)]">Settings</h1>
-        <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">Manage the current boat&apos;s details.</p>
+        <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">Manage the current boat&apos;s details and lists.</p>
       </div>
       <SettingsClient vessel={vessel} vesselCount={vessels.length} />
+      <CategoriesManager categories={categories} />
     </div>
   )
 }

@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import AppShell from '@/components/AppShell'
+import { CategoriesProvider } from '@/components/CategoriesProvider'
 import { getVesselContext } from '@/lib/vessel'
+import { createClient } from '@/lib/supabase/server'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -14,6 +16,15 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { vessels, activeId } = await getVesselContext()
 
+  const supabase = await createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: catsRaw } = await (supabase as any).from('categories').select('kind, name').order('sort_order')
+  const cats = (catsRaw ?? []) as { kind: 'equipment' | 'contact'; name: string }[]
+  const categories = {
+    equipment: cats.filter(c => c.kind === 'equipment').map(c => c.name),
+    contact: cats.filter(c => c.kind === 'contact').map(c => c.name),
+  }
+
   return (
     <html lang="en">
       <head>
@@ -21,9 +32,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className={`${geist.className} h-screen overflow-hidden`} suppressHydrationWarning>
         <div className="h-full bg-[var(--color-background-tertiary)]">
-          <AppShell vessels={vessels} activeId={activeId}>
-            {children}
-          </AppShell>
+          <CategoriesProvider value={categories}>
+            <AppShell vessels={vessels} activeId={activeId}>
+              {children}
+            </AppShell>
+          </CategoriesProvider>
         </div>
       </body>
     </html>

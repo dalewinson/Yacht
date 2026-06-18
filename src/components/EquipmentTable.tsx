@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
+import { useEquipmentCategories } from './CategoriesProvider'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type Task = Database['public']['Tables']['service_tasks']['Row']
-
-const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 const STARTER_TASKS: { name: string; interval_type: IntervalType; interval_value: number }[] = [
   { name: 'Oil & filter',                 interval_type: 'hours',  interval_value: 150 },
@@ -31,6 +30,7 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
   const [category, setCategory] = useState('')
   const [selected, setSelected] = useState<Equipment | null>(null)
   const [adding, setAdding]     = useState(false)
+  const CATEGORIES = useEquipmentCategories()
 
   function handleAdded(created: Equipment) {
     setEquipment(prev => [...prev, created])
@@ -135,8 +135,9 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
   onClose: () => void
   onAdded: (created: Equipment) => void
 }) {
+  const CATEGORIES = useEquipmentCategories()
   const [name, setName]               = useState('')
-  const [category, setCategory]       = useState('Propulsion')
+  const [category, setCategory]       = useState(CATEGORIES[0] ?? 'Propulsion')
   const [model, setModel]             = useState('')
   const [serial, setSerial]           = useState('')
   const [currentHours, setCurrentHours] = useState('')
@@ -216,6 +217,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   onSaved: (updated: Equipment, tasks: Task[]) => void
   onDeleted: (id: string) => void
 }) {
+  const CATEGORIES = useEquipmentCategories()
   const [name, setName]               = useState(e.name)
   const [category, setCategory]       = useState(e.category)
   const [model, setModel]             = useState(e.model ?? '')

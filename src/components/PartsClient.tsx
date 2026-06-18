@@ -2,11 +2,10 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useEquipmentCategories } from './CategoriesProvider'
 import type { Database } from '@/types/database'
 
 type Part = Database['public']['Tables']['parts']['Row']
-
-const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 const isLow = (p: Part) => p.qty_on_hand <= p.reorder_at
 
@@ -17,6 +16,7 @@ export default function PartsClient({
   parts: Part[]
   vesselId: string | null
 }) {
+  const CATEGORIES = useEquipmentCategories()
   const [parts, setParts]       = useState<Part[]>(initial)
   const [search, setSearch]     = useState('')
   const [category, setCategory] = useState('')
@@ -143,7 +143,8 @@ function PartModal({
   onDeleted: (id: string) => void
 }) {
   const [name, setName]           = useState(part?.name ?? '')
-  const [category, setCategory]   = useState(part?.category ?? 'Propulsion')
+  const CATEGORIES = useEquipmentCategories()
+  const [category, setCategory]   = useState(part?.category ?? CATEGORIES[0] ?? 'Propulsion')
   const [equipmentName, setEquip] = useState(part?.equipment_name ?? '')
   const [partNumber, setPartNum]  = useState(part?.part_number ?? '')
   const [location, setLocation]   = useState(part?.location ?? '')

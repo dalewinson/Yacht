@@ -58,9 +58,14 @@ export interface Database {
         Update: { name?: string; category?: string; equipment_name?: string | null; part_number?: string | null; location?: string | null; qty_on_hand?: number; reorder_at?: number; supplier?: string | null; unit_cost?: number | null }
       }
       crew: {
-        Row: { id: string; vessel_id: string; name: string; role: CrewRole; phone: string | null; email: string | null; specialty: string | null; notes: string | null; avatar_color: string; avatar_bg: string; created_at: string }
-        Insert: { id?: string; vessel_id: string; name: string; role?: CrewRole; phone?: string | null; email?: string | null; specialty?: string | null; notes?: string | null; avatar_color?: string; avatar_bg?: string }
-        Update: { name?: string; role?: CrewRole; phone?: string | null; email?: string | null; specialty?: string | null; notes?: string | null }
+        Row: { id: string; vessel_id: string; name: string; role: string; phone: string | null; email: string | null; specialty: string | null; notes: string | null; avatar_color: string; avatar_bg: string; created_at: string }
+        Insert: { id?: string; vessel_id: string; name: string; role?: string; phone?: string | null; email?: string | null; specialty?: string | null; notes?: string | null; avatar_color?: string; avatar_bg?: string }
+        Update: { name?: string; role?: string; phone?: string | null; email?: string | null; specialty?: string | null; notes?: string | null }
+      }
+      categories: {
+        Row: { id: string; kind: 'equipment' | 'contact'; name: string; sort_order: number; created_at: string }
+        Insert: { id?: string; kind: 'equipment' | 'contact'; name: string; sort_order?: number }
+        Update: { name?: string; sort_order?: number }
       }
       inspections: {
         Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; created_at: string }

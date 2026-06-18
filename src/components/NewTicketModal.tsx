@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useEquipmentCategories } from './CategoriesProvider'
 import type { TicketPriority } from '@/types/database'
 
-const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 interface Props {
   vesselId: string
@@ -13,6 +13,7 @@ interface Props {
 }
 
 export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) {
+  const CATEGORIES = useEquipmentCategories()
   const [title, setTitle]           = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]     = useState('')

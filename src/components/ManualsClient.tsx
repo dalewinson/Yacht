@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
+import { useEquipmentCategories } from './CategoriesProvider'
 
 type Equipment = { id: string; name: string; category: string }
 type Manual = {
@@ -17,7 +18,6 @@ type Manual = {
   uploaded_at: string
 }
 
-const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 function fmtSize(bytes: number | null) {
   if (!bytes) return '—'
@@ -34,6 +34,7 @@ export default function ManualsClient({
   equipment: Equipment[]
   vesselId: string | null
 }) {
+  const CATEGORIES = useEquipmentCategories()
   const [manuals, setManuals] = useState<Manual[]>(initial)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [uploading, setUploading] = useState(false)

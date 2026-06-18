@@ -2,14 +2,13 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Database, CrewRole } from '@/types/database'
+import { useContactRoles } from './CategoriesProvider'
+import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['crew']['Row']
 
-const ROLES: CrewRole[] = ['Owner','Captain','Engineer','Deckhand','Technician','Vendor','Marina','Emergency']
-
-// bg / text color per role for the avatar + badge
-const ROLE_STYLE: Record<CrewRole, { bg: string; color: string }> = {
+// Known role colors; any custom role falls back to a deterministic palette pick.
+const ROLE_STYLE: Record<string, { bg: string; color: string }> = {
   Owner:      { bg: '#E6F1FB', color: '#185FA5' },
   Captain:    { bg: '#E6F1FB', color: '#0C447C' },
   Engineer:   { bg: '#EAF3DE', color: '#3B6D11' },
@@ -18,6 +17,17 @@ const ROLE_STYLE: Record<CrewRole, { bg: string; color: string }> = {
   Vendor:     { bg: '#F3EAF7', color: '#6B2E8A' },
   Marina:     { bg: '#E4F1F1', color: '#0E6E6E' },
   Emergency:  { bg: '#FBE6E6', color: '#A32D2D' },
+}
+const FALLBACK_PALETTE = [
+  { bg: '#E6F1FB', color: '#185FA5' }, { bg: '#EAF3DE', color: '#3B6D11' },
+  { bg: '#FAEEDA', color: '#854F0B' }, { bg: '#F3EAF7', color: '#6B2E8A' },
+  { bg: '#E4F1F1', color: '#0E6E6E' }, { bg: '#FBE6E6', color: '#A32D2D' },
+]
+function roleStyle(role: string) {
+  if (ROLE_STYLE[role]) return ROLE_STYLE[role]
+  let h = 0
+  for (let i = 0; i < role.length; i++) h = (h * 31 + role.charCodeAt(i)) >>> 0
+  return FALLBACK_PALETTE[h % FALLBACK_PALETTE.length]
 }
 
 function initials(name: string) {
@@ -31,9 +41,10 @@ export default function ContactsClient({
   contacts: Contact[]
   vesselId: string | null
 }) {
+  const ROLES = useContactRoles()
   const [contacts, setContacts] = useState<Contact[]>(initial)
   const [search, setSearch]     = useState('')
-  const [roleFilter, setRole]   = useState<CrewRole | 'all'>('all')
+  const [roleFilter, setRole]   = useState<string>('all')
   const [editing, setEditing]   = useState<Contact | null>(null)
   const [adding, setAdding]     = useState(false)
 
@@ -61,7 +72,7 @@ export default function ContactsClient({
           type="text" placeholder="Search contacts..." value={search} onChange={e => setSearch(e.target.value)}
           className="flex-1 min-w-[180px] px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)]"
         />
-        <select value={roleFilter} onChange={e => setRole(e.target.value as CrewRole | 'all')}
+        <select value={roleFilter} onChange={e => setRole(e.target.value)}
           className="px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
           <option value="all">All roles</option>
           {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -79,7 +90,7 @@ export default function ContactsClient({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map(c => {
-            const style = ROLE_STYLE[c.role] ?? ROLE_STYLE.Vendor
+            const style = roleStyle(c.role)
             return (
               <div key={c.id} className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] p-3.5">
                 <div className="flex items-start gap-2.5">
@@ -139,8 +150,9 @@ function ContactModal({
   onSaved: (c: Contact) => void
   onDeleted: (id: string) => void
 }) {
+  const ROLES = useContactRoles()
   const [name, setName]           = useState(contact?.name ?? '')
-  const [role, setRole]           = useState<CrewRole>(contact?.role ?? 'Vendor')
+  const [role, setRole]           = useState<string>(contact?.role ?? ROLES[0] ?? 'Vendor')
   const [phone, setPhone]         = useState(contact?.phone ?? '')
   const [email, setEmail]         = useState(contact?.email ?? '')
   const [specialty, setSpecialty] = useState(contact?.specialty ?? '')
@@ -153,7 +165,7 @@ function ContactModal({
     if (!name.trim()) { setError('Name is required.'); return }
     setSaving(true); setError('')
     const supabase = createClient()
-    const style = ROLE_STYLE[role] ?? ROLE_STYLE.Vendor
+    const style = roleStyle(role)
     const payload = {
       name: name.trim(), role,
       phone: phone.trim() || null, email: email.trim() || null,
@@ -198,7 +210,7 @@ function ContactModal({
           <div className="grid grid-cols-2 gap-[10px]">
             {field('Name *', <input type="text" value={name} onChange={e => setName(e.target.value)} className={cls} />)}
             {field('Role',
-              <select value={role} onChange={e => setRole(e.target.value as CrewRole)} className={cls}>
+              <select value={role} onChange={e => setRole(e.target.value)} className={cls}>
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             )}

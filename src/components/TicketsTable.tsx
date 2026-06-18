@@ -14,7 +14,6 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   ticket_attachments?: Attachment[]
 }
 
-const CATEGORIES = ['Vessel','Propulsion','Electrical','Safety','Navigation','HVAC','Plumbing','Systems','Deck']
 
 export default function TicketsTable({ tickets: initial, vesselId }: { tickets: Ticket[]; vesselId: string | null }) {
   const [tickets, setTickets] = useState(initial)
