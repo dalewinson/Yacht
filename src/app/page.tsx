@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
 import { rollupTasks, fmtDate, type TaskLike } from '@/lib/utils'
+import { getDueSoon } from '@/lib/settings'
 import ServiceStatusBadge from '@/components/ServiceStatusBadge'
 import StatusBadge from '@/components/StatusBadge'
 import PriorityBadge from '@/components/PriorityBadge'
@@ -30,9 +31,10 @@ export default async function DashboardPage() {
   const tasks       = (tasksRaw       ?? []) as (TaskLike & { equipment_id: string })[]
   const inspections = (inspectionsRaw ?? []) as Inspection[]
 
+  const ds = await getDueSoon()
   const tasksByEq: Record<string, TaskLike[]> = {}
   for (const t of tasks) (tasksByEq[t.equipment_id] ??= []).push(t)
-  const eqRoll = (e: Equipment) => rollupTasks(tasksByEq[e.id] ?? [], e.current_hours)
+  const eqRoll = (e: Equipment) => rollupTasks(tasksByEq[e.id] ?? [], e.current_hours, { leadDays: ds.days, leadHours: ds.hours })
 
   const tk = tickets
   const pt = parts

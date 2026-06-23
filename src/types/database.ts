@@ -67,6 +67,11 @@ export interface Database {
         Insert: { id?: string; kind: 'equipment' | 'contact'; name: string; sort_order?: number }
         Update: { name?: string; sort_order?: number }
       }
+      app_settings: {
+        Row: { id: number; due_soon_days: number; due_soon_hours: number }
+        Insert: { id?: number; due_soon_days?: number; due_soon_hours?: number }
+        Update: { due_soon_days?: number; due_soon_hours?: number }
+      }
       inspections: {
         Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; created_at: string }
         Insert: { id?: string; vessel_id: string; vessel_name: string; tech?: string | null; date: string; month: string; year: number; port_engine_hrs?: number | null; stbd_engine_hrs?: number | null; port_gen_hrs?: number | null; sections?: Record<string, unknown> }

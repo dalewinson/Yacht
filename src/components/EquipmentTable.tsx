@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
 import { useEquipmentCategories } from './CategoriesProvider'
+import { useDueSoon } from './SettingsProvider'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
@@ -31,6 +32,8 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
   const [selected, setSelected] = useState<Equipment | null>(null)
   const [adding, setAdding]     = useState(false)
   const CATEGORIES = useEquipmentCategories()
+  const ds = useDueSoon()
+  const leadOpts = { leadDays: ds.days, leadHours: ds.hours }
 
   function handleAdded(created: Equipment, tasks: Task[]) {
     setEquipment(prev => [...prev, created])
@@ -91,7 +94,7 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
             {filtered.length === 0 ? (
               <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-4">No equipment found</td></tr>
             ) : filtered.map(e => {
-              const roll = rollupTasks(tasksByEq[e.id] ?? [], e.current_hours)
+              const roll = rollupTasks(tasksByEq[e.id] ?? [], e.current_hours, leadOpts)
               return (
                 <tr key={e.id} className="hover:bg-[var(--color-background-secondary)]">
                   <td className="px-4 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -284,6 +287,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
 
+  const ds = useDueSoon()
   const curHrs = currentHours ? parseInt(currentHours) : null
   const hasHoursTask = tasks.some(t => t.interval_type === 'hours')
 
@@ -406,7 +410,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
                   const preview = t.name && t.interval_value ? computeTask({
                     name: t.name, interval_type: t.interval_type, interval_value: parseInt(t.interval_value) || 0,
                     last_done_date: t.last_done_date || null, last_done_hours: t.last_done_hours ? parseInt(t.last_done_hours) : null,
-                  }, curHrs) : null
+                  }, curHrs, { leadDays: ds.days, leadHours: ds.hours }) : null
                   return (
                     <div key={i} className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded p-2">
                       <div className="flex items-center gap-1.5">

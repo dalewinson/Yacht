@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
 import { computeTask, type TaskLike } from '@/lib/utils'
+import { getDueSoon } from '@/lib/settings'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
@@ -27,13 +28,14 @@ export default async function AlertsPage() {
   const tickets = (tkRaw ?? []) as Ticket[]
   const tasks = (tasksRaw ?? []) as Task[]
 
+  const ds = await getDueSoon()
   const eqById = new Map(equipment.map(e => [e.id, e]))
   const alerts: Alert[] = []
 
   for (const t of tasks) {
     const eq = eqById.get(t.equipment_id)
     if (!eq) continue
-    const svc = computeTask(t as TaskLike, eq.current_hours)
+    const svc = computeTask(t as TaskLike, eq.current_hours, { leadDays: ds.days, leadHours: ds.hours })
     if (svc.status === 'overdue') alerts.push({ severity: 'high', title: `${eq.name} — ${t.name} overdue`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
     else if (svc.status === 'due') alerts.push({ severity: 'med', title: `${eq.name} — ${t.name} due soon`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
   }

@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
 import SettingsClient from '@/components/SettingsClient'
 import CategoriesManager from '@/components/CategoriesManager'
+import DueSoonSettings from '@/components/DueSoonSettings'
+import { getDueSoon } from '@/lib/settings'
 import type { Database } from '@/types/database'
 
 type Vessel = Database['public']['Tables']['vessels']['Row']
@@ -20,6 +22,7 @@ export default async function SettingsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: catsRaw } = await (supabase as any).from('categories').select('*').order('sort_order')
   const categories = (catsRaw ?? []) as Category[]
+  const dueSoon = await getDueSoon()
 
   return (
     <div className="p-6 max-w-[640px] mx-auto space-y-6">
@@ -28,6 +31,7 @@ export default async function SettingsPage() {
         <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">Manage the current boat&apos;s details and lists.</p>
       </div>
       <SettingsClient vessel={vessel} vesselCount={vessels.length} />
+      <DueSoonSettings days={dueSoon.days} hours={dueSoon.hours} />
       <CategoriesManager categories={categories} />
     </div>
   )

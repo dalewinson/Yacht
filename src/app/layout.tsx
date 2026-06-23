@@ -3,7 +3,9 @@ import { Geist } from 'next/font/google'
 import './globals.css'
 import AppShell from '@/components/AppShell'
 import { CategoriesProvider } from '@/components/CategoriesProvider'
+import { SettingsProvider } from '@/components/SettingsProvider'
 import { getVesselContext } from '@/lib/vessel'
+import { getDueSoon } from '@/lib/settings'
 import { createClient } from '@/lib/supabase/server'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -24,6 +26,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     equipment: cats.filter(c => c.kind === 'equipment').map(c => c.name),
     contact: cats.filter(c => c.kind === 'contact').map(c => c.name),
   }
+  const dueSoon = await getDueSoon()
 
   return (
     <html lang="en">
@@ -33,9 +36,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${geist.className} h-screen overflow-hidden`} suppressHydrationWarning>
         <div className="h-full bg-[var(--color-background-tertiary)]">
           <CategoriesProvider value={categories}>
-            <AppShell vessels={vessels} activeId={activeId}>
-              {children}
-            </AppShell>
+            <SettingsProvider value={dueSoon}>
+              <AppShell vessels={vessels} activeId={activeId}>
+                {children}
+              </AppShell>
+            </SettingsProvider>
           </CategoriesProvider>
         </div>
       </body>
