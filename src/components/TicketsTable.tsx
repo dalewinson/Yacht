@@ -3,12 +3,13 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
+import { uploadTicketMedia, deleteTicketMedia, ticketMediaUrl, type TicketAttachment } from '@/lib/ticket-media'
 import StatusBadge from './StatusBadge'
 import PriorityBadge from './PriorityBadge'
 import NewTicketButton from './NewTicketButton'
 import type { Database, TicketStatus } from '@/types/database'
 
-type Attachment = { id: string; storage_path: string; content_type: string | null }
+type Attachment = TicketAttachment
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   vessels: { name: string } | null
   ticket_attachments?: Attachment[]
@@ -36,6 +37,11 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
     await (supabase as any).from('tickets').delete().eq('id', id)
     setTickets(prev => prev.filter(t => t.id !== id))
     setSelected(null)
+  }
+
+  function updateAttachments(id: string, attachments: Attachment[]) {
+    setTickets(prev => prev.map(t => t.id === id ? { ...t, ticket_attachments: attachments } : t))
+    setSelected(prev => prev && prev.id === id ? { ...prev, ticket_attachments: attachments } : prev)
   }
 
   return (
@@ -98,21 +104,47 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
           onClose={() => setSelected(null)}
           onUpdateStatus={updateStatus}
           onDelete={deleteTicket}
+          onAttachmentsChange={updateAttachments}
         />
       )}
     </>
   )
 }
 
-function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete }: {
+function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete, onAttachmentsChange }: {
   ticket: Ticket
   onClose: () => void
   onUpdateStatus: (id: string, status: TicketStatus) => Promise<void>
   onDelete: (id: string) => Promise<void>
+  onAttachmentsChange: (id: string, attachments: Attachment[]) => void
 }) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [status, setStatus] = useState<TicketStatus>(t.status)
+  const [attachments, setAttachments] = useState<Attachment[]>(t.ticket_attachments ?? [])
+  const [uploading, setUploading] = useState(false)
+
+  async function addFiles(fileList: FileList | null) {
+    if (!fileList?.length) return
+    setUploading(true)
+    const added: Attachment[] = []
+    for (const file of Array.from(fileList)) {
+      const a = await uploadTicketMedia(t.id, file)
+      if (a) added.push(a)
+    }
+    const next = [...attachments, ...added]
+    setAttachments(next)
+    onAttachmentsChange(t.id, next)
+    setUploading(false)
+  }
+
+  async function removeAttachment(a: Attachment) {
+    if (!confirm('Remove this photo?')) return
+    await deleteTicketMedia(a)
+    const next = attachments.filter(x => x.id !== a.id)
+    setAttachments(next)
+    onAttachmentsChange(t.id, next)
+  }
 
   async function save() {
     setSaving(true)
@@ -159,23 +191,34 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete }: {
           </>
         )}
 
-        {t.ticket_attachments && t.ticket_attachments.length > 0 && (
-          <>
-            <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)] mt-3 mb-2">Photos</div>
-            <div className="grid grid-cols-3 gap-2">
-              {t.ticket_attachments.map(a => {
-                const url = createClient().storage.from('ticket-media').getPublicUrl(a.storage_path).data.publicUrl
-                const isVideo = (a.content_type ?? '').startsWith('video')
-                return (
-                  <a key={a.id} href={url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden rounded-[var(--border-radius-md)] border border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)]">
+        <div className="flex items-center justify-between mt-3 mb-2">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Photos / video</div>
+          <label className="text-[11px] text-[#185FA5] hover:underline cursor-pointer inline-flex items-center gap-1">
+            <i className="ti ti-camera-plus text-[13px]" /> {uploading ? 'Uploading…' : 'Add'}
+            <input type="file" accept="image/*,video/*" multiple className="hidden" disabled={uploading}
+              onChange={e => { addFiles(e.target.files); e.target.value = '' }} />
+          </label>
+        </div>
+        {attachments.length === 0 ? (
+          <p className="text-[11px] text-[var(--color-text-tertiary)]">No photos yet.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {attachments.map(a => {
+              const url = ticketMediaUrl(a.storage_path)
+              const isVideo = (a.content_type ?? '').startsWith('video')
+              return (
+                <div key={a.id} className="relative group aspect-square overflow-hidden rounded-[var(--border-radius-md)] border border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)]">
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
                     {isVideo
                       ? <div className="w-full h-full flex items-center justify-center text-[var(--color-text-secondary)]"><i className="ti ti-video text-[22px]" /></div>
                       : <img src={url} alt="attachment" className="w-full h-full object-cover" />}
                   </a>
-                )
-              })}
-            </div>
-          </>
+                  <button onClick={() => removeAttachment(a)} title="Remove"
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/55 text-white flex items-center justify-center text-[12px] leading-none hover:bg-[#A32D2D]">×</button>
+                </div>
+              )
+            })}
+          </div>
         )}
 
         <div className="flex items-center justify-between gap-2 mt-4">

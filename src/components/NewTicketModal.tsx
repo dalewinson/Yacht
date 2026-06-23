@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { uploadTicketMedia, type TicketAttachment } from '@/lib/ticket-media'
 import { useEquipmentCategories } from './CategoriesProvider'
 import type { TicketPriority } from '@/types/database'
 
@@ -19,6 +20,7 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
   const [category, setCategory]     = useState('')
   const [priority, setPriority]     = useState<TicketPriority>('medium')
   const [assignedTo, setAssignedTo] = useState('')
+  const [files, setFiles]           = useState<File[]>([])
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState('')
 
@@ -42,7 +44,14 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
     }).select().single()
 
     if (err) { setError(err.message); setSaving(false); return }
-    onCreated?.(data as Record<string, unknown>)
+
+    // Upload any attached photos/videos and link them to the new ticket.
+    const attachments: TicketAttachment[] = []
+    for (const file of files) {
+      const a = await uploadTicketMedia(data.id, file)
+      if (a) attachments.push(a)
+    }
+    onCreated?.({ ...(data as Record<string, unknown>), ticket_attachments: attachments })
   }
 
   return (
@@ -92,6 +101,14 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
               className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)] resize-y min-h-[70px]" />
           </div>
 
+          <div>
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Photos / video</label>
+            <input type="file" accept="image/*,video/*" multiple
+              onChange={e => setFiles(Array.from(e.target.files ?? []))}
+              className="block w-full text-[11px] text-[var(--color-text-secondary)] file:mr-2 file:px-2 file:py-1 file:text-[11px] file:border file:border-[var(--color-border-secondary)] file:rounded-[var(--border-radius-md)] file:bg-[var(--color-background-secondary)] file:text-[var(--color-text-primary)]" />
+            {files.length > 0 && <p className="text-[10px] text-[var(--color-text-tertiary)] mt-1">{files.length} file{files.length > 1 ? 's' : ''} selected</p>}
+          </div>
+
           {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-1">
@@ -101,7 +118,7 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
             </button>
             <button type="submit" disabled={saving}
               className="px-3 py-[5px] text-[12px] bg-[#185FA5] text-white border border-[#185FA5] rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
-              {saving ? 'Saving…' : 'Submit'}
+              {saving ? (files.length ? 'Uploading…' : 'Saving…') : 'Submit'}
             </button>
           </div>
         </form>
