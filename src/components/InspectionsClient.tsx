@@ -304,7 +304,15 @@ function InspectionForm({
           <h2 className="text-[15px] font-semibold text-[var(--color-text-primary)]">
             {existing ? `${existing.month} ${existing.year} Inspection` : 'New Monthly Inspection'}
           </h2>
-          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
+          <div className="flex items-center gap-3">
+            {existing && (
+              <a href={`/inspections/${existing.id}/report`} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-tertiary)]">
+                <i className="ti ti-printer text-[13px]" /> Report
+              </a>
+            )}
+            <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3 px-5 py-3 border-b border-[var(--color-border-tertiary)] flex-shrink-0">
