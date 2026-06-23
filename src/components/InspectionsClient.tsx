@@ -99,9 +99,14 @@ export default function InspectionsClient({
                 <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{insp.stbd_engine_hrs ?? '—'}</td>
                 <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtDate(insp.date)}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
-                  <button onClick={() => setViewing(insp)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
-                    <i className="ti ti-edit text-[12px]" /> Open
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => setViewing(insp)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
+                      <i className="ti ti-edit text-[12px]" /> Open
+                    </button>
+                    <a href={`/inspections/${insp.id}/report`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]" title="Printable report">
+                      <i className="ti ti-printer text-[12px]" /> Report
+                    </a>
+                  </div>
                 </td>
               </tr>
             ))}

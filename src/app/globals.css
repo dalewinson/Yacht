@@ -12,3 +12,12 @@
   --border-radius-md:           6px;
   --border-radius-lg:           10px;
 }
+
+/* Print: show only the report (#print-root), hide the app chrome and any .no-print elements. */
+@media print {
+  body * { visibility: hidden; }
+  #print-root, #print-root * { visibility: visible; }
+  #print-root { position: absolute; inset: 0; width: 100%; }
+  .no-print { display: none !important; }
+  @page { margin: 14mm; }
+}
