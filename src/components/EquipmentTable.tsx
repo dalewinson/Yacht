@@ -32,11 +32,11 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
   const [adding, setAdding]     = useState(false)
   const CATEGORIES = useEquipmentCategories()
 
-  function handleAdded(created: Equipment) {
+  function handleAdded(created: Equipment, tasks: Task[]) {
     setEquipment(prev => [...prev, created])
-    setTasksByEq(prev => ({ ...prev, [created.id]: [] }))
+    setTasksByEq(prev => ({ ...prev, [created.id]: tasks }))
     setAdding(false)
-    setSelected(created) // open edit so they can add service tasks right away
+    setSelected(created) // open edit so they can add more service tasks
   }
 
   const filtered = equipment.filter(e => {
@@ -133,35 +133,61 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
 function AddEquipmentModal({ vesselId, onClose, onAdded }: {
   vesselId: string
   onClose: () => void
-  onAdded: (created: Equipment) => void
+  onAdded: (created: Equipment, tasks: Task[]) => void
 }) {
   const CATEGORIES = useEquipmentCategories()
-  const [name, setName]               = useState('')
-  const [category, setCategory]       = useState(CATEGORIES[0] ?? 'Propulsion')
-  const [model, setModel]             = useState('')
-  const [serial, setSerial]           = useState('')
-  const [currentHours, setCurrentHours] = useState('')
-  const [notes, setNotes]             = useState('')
-  const [saving, setSaving]           = useState(false)
-  const [error, setError]             = useState('')
+  const [name, setName]         = useState('')
+  const [category, setCategory] = useState(CATEGORIES[0] ?? 'Propulsion')
+  const [model, setModel]       = useState('')
+  const [serial, setSerial]     = useState('')
+  const [notes, setNotes]       = useState('')
+  // optional first service task
+  const [tName, setTName]       = useState('')
+  const [tType, setTType]       = useState<IntervalType>('hours')
+  const [tValue, setTValue]     = useState('')
+  const [tCurHours, setTCurHours] = useState('')
+  const [tLastHours, setTLastHours] = useState('')
+  const [tLastDate, setTLastDate]   = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState('')
+
+  const hasTask = !!(tValue && parseInt(tValue) > 0)
 
   async function submit(ev: React.FormEvent) {
     ev.preventDefault()
     if (!name.trim()) { setError('Name is required.'); return }
     setSaving(true); setError('')
     const supabase = createClient()
+
+    // current_hours only applies when an hours-based task is being set up
+    const currentHours = (hasTask && tType === 'hours' && tCurHours) ? parseInt(tCurHours) : null
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error: err } = await (supabase as any).from('equipment').insert({
       vessel_id: vesselId,
-      name: name.trim(),
-      category,
-      model: model.trim() || null,
-      serial: serial.trim() || null,
-      current_hours: currentHours ? parseInt(currentHours) : null,
-      notes: notes.trim() || null,
+      name: name.trim(), category,
+      model: model.trim() || null, serial: serial.trim() || null,
+      current_hours: currentHours, notes: notes.trim() || null,
     }).select().single()
     if (err) { setError(err.message); setSaving(false); return }
-    onAdded(data as Equipment)
+    const created = data as Equipment
+
+    const tasks: Task[] = []
+    if (hasTask) {
+      const payload = {
+        equipment_id: created.id, vessel_id: vesselId,
+        name: tName.trim() || 'Service',
+        interval_type: tType,
+        interval_value: parseInt(tValue),
+        last_done_hours: tType === 'hours' ? (tLastHours ? parseInt(tLastHours) : currentHours) : null,
+        last_done_date: tType === 'months' ? (tLastDate || null) : null,
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: tData } = await (supabase as any).from('service_tasks').insert(payload).select().single()
+      if (tData) tasks.push(tData as Task)
+    }
+
+    onAdded(created, tasks)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -170,8 +196,8 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
   )
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 bg-black/40 p-4">
-      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[460px] p-5">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-12 bg-black/40 p-4">
+      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[480px] max-h-[88vh] overflow-y-auto p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Add equipment</h2>
           <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
@@ -184,11 +210,36 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
             )}
             {field('Make / model', <input type="text" value={model} onChange={e => setModel(e.target.value)} className={cls} />)}
             {field('Serial #', <input type="text" value={serial} onChange={e => setSerial(e.target.value)} className={cls} />)}
-            {field('Current hours', <input type="number" min="0" value={currentHours} onChange={e => setCurrentHours(e.target.value)} placeholder="if applicable" className={cls} />)}
           </div>
+
+          {/* Optional first service task */}
+          <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3 bg-[var(--color-background-secondary)] space-y-2">
+            <div className="text-[11px] font-medium text-[var(--color-text-primary)]">First service task <span className="font-normal text-[var(--color-text-tertiary)]">(optional)</span></div>
+            <div className="flex items-center gap-1.5">
+              <input type="text" value={tName} onChange={e => setTName(e.target.value)} placeholder="e.g. Oil & filter, Teak oiling"
+                className="flex-1 min-w-0 px-1.5 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
+              <span className="text-[10px] text-[var(--color-text-tertiary)]">every</span>
+              <input type="number" min="1" value={tValue} onChange={e => setTValue(e.target.value)} placeholder="150"
+                className="w-[56px] px-1.5 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
+              <select value={tType} onChange={e => setTType(e.target.value as IntervalType)}
+                className="px-1 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
+                <option value="hours">hrs</option>
+                <option value="months">months</option>
+              </select>
+            </div>
+            {hasTask && (tType === 'hours' ? (
+              <div className="grid grid-cols-2 gap-2">
+                {field('Current hours', <input type="number" min="0" value={tCurHours} onChange={e => setTCurHours(e.target.value)} className={cls} />)}
+                {field('Hours at last service', <input type="number" min="0" value={tLastHours} onChange={e => setTLastHours(e.target.value)} placeholder="defaults to current" className={cls} />)}
+              </div>
+            ) : (
+              field('Last done (date)', <input type="date" value={tLastDate} onChange={e => setTLastDate(e.target.value)} className={cls} />)
+            ))}
+            <p className="text-[10px] text-[var(--color-text-tertiary)]">Choose hrs for metered gear (engines), months for date-based items (teak, liferaft). Add more tasks after saving.</p>
+          </div>
+
           {field('Notes', <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${cls} resize-y`} />)}
           {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
-          <p className="text-[10px] text-[var(--color-text-tertiary)]">After adding, the edit screen opens so you can set service tasks.</p>
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
             <button type="submit" disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
@@ -234,6 +285,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   const [error, setError]             = useState('')
 
   const curHrs = currentHours ? parseInt(currentHours) : null
+  const hasHoursTask = tasks.some(t => t.interval_type === 'hours')
 
   function patchTask(i: number, p: Partial<TaskRow>) {
     setTasks(prev => prev.map((t, idx) => idx === i ? { ...t, ...p } : t))
@@ -331,7 +383,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
             )}
             {field('Make / model', <input type="text" value={model} onChange={ev => setModel(ev.target.value)} className={cls} />)}
             {field('Serial #', <input type="text" value={serial} onChange={ev => setSerial(ev.target.value)} className={cls} />)}
-            {field('Current hours', <input type="number" min="0" value={currentHours} onChange={ev => setCurrentHours(ev.target.value)} placeholder="e.g. 2480" className={cls} />)}
+            {hasHoursTask && field('Current hours', <input type="number" min="0" value={currentHours} onChange={ev => setCurrentHours(ev.target.value)} placeholder="e.g. 2480" className={cls} />)}
             {field('Last inspected', <input type="text" readOnly value={e.last_inspected ? fmtDate(e.last_inspected) : 'Not yet'} className={`${cls} text-[var(--color-text-secondary)]`} />)}
             {field('Assigned tech', <input type="text" value={assignedTech} onChange={ev => setAssignedTech(ev.target.value)} className={cls} />)}
           </div>
