@@ -100,12 +100,20 @@ export function rollupTasks(tasks: TaskLike[], currentHours: number | null, opts
   return { status: worst.status, label, taskCount: tasks.length }
 }
 
+// Parse a date string for display. A plain 'YYYY-MM-DD' is treated as a LOCAL
+// calendar date (not UTC midnight), avoiding the off-by-one in negative-offset
+// time zones. Full timestamps fall through to normal parsing.
+function parseForDisplay(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso)
+}
+
 export function fmtDate(iso: string | null) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return parseForDisplay(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export function fmtDateShort(iso: string | null) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return parseForDisplay(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
