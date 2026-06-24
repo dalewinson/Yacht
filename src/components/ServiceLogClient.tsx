@@ -22,13 +22,14 @@ export default function ServiceLogClient({
 }) {
   const [entries, setEntries] = useState<ServiceLog[]>(initial)
   const [showNew, setShowNew] = useState(false)
+  const [editing, setEditing] = useState<ServiceLog | null>(null)
 
   const tasksByEq: Record<string, Task[]> = {}
   for (const t of tasks) (tasksByEq[t.equipment_id] ??= []).push(t)
 
-  function handleCreated(entry: ServiceLog) {
-    setEntries(prev => [entry, ...prev])
-    setShowNew(false)
+  function onSaved(entry: ServiceLog) {
+    setEntries(prev => prev.some(x => x.id === entry.id) ? prev.map(x => x.id === entry.id ? entry : x) : [entry, ...prev])
+    setShowNew(false); setEditing(null)
   }
 
   async function remove(entry: ServiceLog) {
@@ -70,7 +71,9 @@ export default function ServiceLogClient({
               <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-8">No service records yet. Click &quot;Log service&quot; to add the first.</td></tr>
             ) : entries.map(e => (
               <tr key={e.id} className="hover:bg-[var(--color-background-secondary)] align-top">
-                <td className="px-4 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtDate(e.date)}</td>
+                <td className="px-4 py-2 border-b border-[var(--color-border-tertiary)]">
+                  <button onClick={() => setEditing(e)} className="text-[#185FA5] hover:underline">{fmtDate(e.date)}</button>
+                </td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] font-medium overflow-hidden text-ellipsis">{e.equipment_name}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-primary)]">
                   {e.work_performed}
@@ -78,7 +81,10 @@ export default function ServiceLogClient({
                 </td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.tech ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtCost(e.cost)}</td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-right">
+                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-right whitespace-nowrap">
+                  <button onClick={() => setEditing(e)} className="text-[var(--color-text-tertiary)] hover:text-[#185FA5] mr-2" title="Edit">
+                    <i className="ti ti-edit text-[14px]" />
+                  </button>
                   <button onClick={() => remove(e)} className="text-[var(--color-text-tertiary)] hover:text-[#A32D2D]" title="Delete">
                     <i className="ti ti-trash text-[14px]" />
                   </button>
@@ -89,13 +95,14 @@ export default function ServiceLogClient({
         </table>
       </div>
 
-      {showNew && vesselId && (
+      {(showNew || editing) && vesselId && (
         <LogServiceModal
           vesselId={vesselId}
           equipment={equipment}
           tasksByEq={tasksByEq}
-          onClose={() => setShowNew(false)}
-          onCreated={handleCreated}
+          entry={editing}
+          onClose={() => { setShowNew(false); setEditing(null) }}
+          onSaved={onSaved}
         />
       )}
     </>
@@ -103,23 +110,24 @@ export default function ServiceLogClient({
 }
 
 function LogServiceModal({
-  vesselId, equipment, tasksByEq, onClose, onCreated,
+  vesselId, equipment, tasksByEq, entry, onClose, onSaved,
 }: {
   vesselId: string
   equipment: Equipment[]
   tasksByEq: Record<string, Task[]>
+  entry: ServiceLog | null
   onClose: () => void
-  onCreated: (entry: ServiceLog) => void
+  onSaved: (entry: ServiceLog) => void
 }) {
   const today = new Date().toISOString().slice(0, 10)
-  const [equipmentId, setEquipmentId] = useState('')
-  const [otherName, setOtherName]     = useState('')
-  const [date, setDate]               = useState(today)
-  const [work, setWork]               = useState('')
-  const [tech, setTech]               = useState('')
-  const [cost, setCost]               = useState('')
-  const [parts, setParts]             = useState('')
-  const [notes, setNotes]             = useState('')
+  const [equipmentId, setEquipmentId] = useState(entry?.equipment_id ?? '')
+  const [otherName, setOtherName]     = useState(entry && !entry.equipment_id ? entry.equipment_name : '')
+  const [date, setDate]               = useState(entry?.date ?? today)
+  const [work, setWork]               = useState(entry?.work_performed ?? '')
+  const [tech, setTech]               = useState(entry?.tech ?? '')
+  const [cost, setCost]               = useState(entry?.cost?.toString() ?? '')
+  const [parts, setParts]             = useState(entry?.parts_used ?? '')
+  const [notes, setNotes]             = useState(entry?.notes ?? '')
   const [completed, setCompleted]     = useState<Set<string>>(new Set())
   const [currentHours, setCurrentHours] = useState('')
   const [saving, setSaving]           = useState(false)
@@ -147,9 +155,7 @@ function LogServiceModal({
     setSaving(true); setError('')
     const supabase = createClient()
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: entry, error: e1 } = await (supabase as any).from('service_log').insert({
-      vessel_id: vesselId,
+    const payload = {
       equipment_id: selected?.id ?? null,
       equipment_name: equipmentName,
       date,
@@ -158,7 +164,16 @@ function LogServiceModal({
       cost: cost ? Number(cost) : null,
       parts_used: parts.trim() || null,
       notes: notes.trim() || null,
-    }).select().single()
+    }
+
+    let saved, e1
+    if (entry) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').update(payload).eq('id', entry.id).select().single())
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').insert({ vessel_id: vesselId, ...payload }).select().single())
+    }
 
     if (e1) { setError(e1.message); setSaving(false); return }
 
@@ -180,7 +195,7 @@ function LogServiceModal({
       await (supabase as any).from('service_tasks').update(patch).eq('id', t.id)
     }
 
-    onCreated(entry as ServiceLog)
+    onSaved(saved as ServiceLog)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -192,7 +207,7 @@ function LogServiceModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/40 p-4">
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[520px] max-h-[85vh] overflow-y-auto p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Log service</h2>
+          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">{entry ? 'Edit service record' : 'Log service'}</h2>
           <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
         </div>
 
