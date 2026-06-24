@@ -266,6 +266,11 @@ function TripModal({
             {field('Fuel begin (gal)', <input type="number" step="0.1" value={fuelStart} onChange={e => setFuelStart(e.target.value)} className={cls} />)}
             {field('Fuel end (gal)', <input type="number" step="0.1" value={fuelEnd} onChange={e => setFuelEnd(e.target.value)} className={cls} />)}
           </div>
+          {fuelStart !== '' && fuelEnd !== '' && (
+            <p className="text-[11px] text-[var(--color-text-secondary)] -mt-1">
+              Fuel used: <span className="font-medium text-[var(--color-text-primary)]">{(Number(fuelStart) - Number(fuelEnd)).toLocaleString('en-US', { maximumFractionDigits: 1 })} gal</span>
+            </p>
+          )}
 
           {/* Timeline */}
           <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3 bg-[var(--color-background-secondary)]">
