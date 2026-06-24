@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { uploadTicketMedia, type TicketAttachment } from '@/lib/ticket-media'
 import { useEquipmentCategories } from './CategoriesProvider'
+import { useVesselEquipment } from '@/lib/use-equipment'
 import type { TicketPriority } from '@/types/database'
 
 
@@ -15,9 +16,11 @@ interface Props {
 
 export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) {
   const CATEGORIES = useEquipmentCategories()
+  const equipment = useVesselEquipment(vesselId)
   const [title, setTitle]           = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory]     = useState('')
+  const [equipmentId, setEquipmentId] = useState('')
   const [priority, setPriority]     = useState<TicketPriority>('medium')
   const [assignedTo, setAssignedTo] = useState('')
   const [files, setFiles]           = useState<File[]>([])
@@ -38,6 +41,7 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
       title:       title.trim(),
       description: description.trim() || null,
       category:    category || null,
+      equipment_id: equipmentId || null,
       priority,
       assigned_to: assignedTo.trim() || null,
       source:      'manual',
@@ -92,6 +96,15 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
                 placeholder="Name"
                 className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Equipment</label>
+            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)}
+              className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
+              <option value="">— None —</option>
+              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+            </select>
           </div>
 
           <div>

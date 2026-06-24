@@ -548,6 +548,7 @@ function FlaggedReview({
         priority: c.priority,
         source: 'manual',
         category: c.category,
+        equipment_id: c.equipmentId,
         inspection_ref: c.ref,
       }))
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

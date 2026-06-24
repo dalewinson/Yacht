@@ -8,6 +8,7 @@ import StatusBadge from './StatusBadge'
 import PriorityBadge from './PriorityBadge'
 import NewTicketButton from './NewTicketButton'
 import { useEquipmentCategories } from './CategoriesProvider'
+import { useVesselEquipment } from '@/lib/use-equipment'
 import type { Database, TicketStatus, TicketPriority } from '@/types/database'
 
 type Attachment = TicketAttachment
@@ -167,8 +168,10 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
   onAttachmentsChange: (id: string, attachments: Attachment[]) => void
 }) {
   const CATEGORIES = useEquipmentCategories()
+  const equipment = useVesselEquipment(t.vessel_id)
   const [title, setTitle]           = useState(t.title)
   const [category, setCategory]     = useState(t.category ?? '')
+  const [equipmentId, setEquipmentId] = useState(t.equipment_id ?? '')
   const [priority, setPriority]     = useState<TicketPriority>(t.priority)
   const [assignedTo, setAssignedTo] = useState(t.assigned_to ?? '')
   const [description, setDescription] = useState(t.description ?? '')
@@ -207,6 +210,7 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
     await onSave(t.id, {
       title: title.trim(),
       category: category || null,
+      equipment_id: equipmentId || null,
       priority,
       assigned_to: assignedTo.trim() || null,
       description: description.trim() || null,
@@ -273,6 +277,13 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
                 <option value="closed">Closed</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label className={lbl}>Equipment</label>
+            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)} className={cls}>
+              <option value="">— None —</option>
+              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+            </select>
           </div>
           <div>
             <label className={lbl}>Details</label>
