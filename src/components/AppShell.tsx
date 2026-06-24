@@ -1,8 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import type { VesselLite } from '@/lib/vessel-shared'
+
+// Public, un-gated pages that render without the app chrome (sidebar/topbar).
+const BARE_PATHS = ['/sms']
 
 export default function AppShell({
   vessels,
@@ -14,6 +18,11 @@ export default function AppShell({
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
+
+  if (BARE_PATHS.includes(pathname)) {
+    return <main className="h-full overflow-y-auto">{children}</main>
+  }
 
   return (
     <div className="flex h-full">

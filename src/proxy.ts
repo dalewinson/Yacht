@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 import { AUTH_COOKIE, sha256Hex } from '@/lib/auth'
 
 // Paths that must stay reachable without the password.
-const PUBLIC = ['/login', '/api/login', '/api/logout', '/api/sms']
+const PUBLIC = ['/login', '/api/login', '/api/logout', '/api/sms', '/sms']
 
 export async function proxy(request: NextRequest) {
   const password = process.env.APP_PASSWORD
