@@ -7,7 +7,8 @@ import { uploadTicketMedia, deleteTicketMedia, ticketMediaUrl, type TicketAttach
 import StatusBadge from './StatusBadge'
 import PriorityBadge from './PriorityBadge'
 import NewTicketButton from './NewTicketButton'
-import type { Database, TicketStatus } from '@/types/database'
+import { useEquipmentCategories } from './CategoriesProvider'
+import type { Database, TicketStatus, TicketPriority } from '@/types/database'
 
 type Attachment = TicketAttachment
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
@@ -16,19 +17,46 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
 }
 
 
+type SortKey = 'title' | 'category' | 'priority' | 'created_at' | 'status'
+const PRIORITY_ORDER: Record<string, number> = { low: 0, medium: 1, high: 2, urgent: 3 }
+const STATUS_ORDER: Record<string, number> = { open: 0, in_progress: 1, resolved: 2, closed: 3 }
+
 export default function TicketsTable({ tickets: initial, vesselId }: { tickets: Ticket[]; vesselId: string | null }) {
   const [tickets, setTickets] = useState(initial)
   const [selected, setSelected] = useState<Ticket | null>(null)
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all')
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'created_at', dir: -1 })
+
+  // Stable ticket numbers by creation order (so sorting doesn't renumber).
+  const numberById = new Map(
+    [...tickets].sort((a, b) => (a.created_at < b.created_at ? -1 : 1)).map((t, i) => [t.id, i + 1001]),
+  )
 
   const filtered = tickets.filter(t => statusFilter === 'all' || t.status === statusFilter)
+  const sorted = [...filtered].sort((a, b) => {
+    let av: string | number, bv: string | number
+    switch (sort.key) {
+      case 'priority': av = PRIORITY_ORDER[a.priority]; bv = PRIORITY_ORDER[b.priority]; break
+      case 'status':   av = STATUS_ORDER[a.status];     bv = STATUS_ORDER[b.status];     break
+      case 'created_at': av = a.created_at; bv = b.created_at; break
+      case 'category': av = (a.category ?? '').toLowerCase(); bv = (b.category ?? '').toLowerCase(); break
+      default:         av = (a.title ?? '').toLowerCase();    bv = (b.title ?? '').toLowerCase()
+    }
+    if (av < bv) return -1 * sort.dir
+    if (av > bv) return 1 * sort.dir
+    return 0
+  })
 
-  async function updateStatus(id: string, status: TicketStatus) {
+  function toggleSort(key: SortKey) {
+    setSort(prev => prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: key === 'created_at' ? -1 : 1 })
+  }
+
+  async function updateTicket(id: string, patch: Partial<Ticket>) {
     const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('tickets').update({ status }).eq('id', id)
-    setTickets(prev => prev.map(t => t.id === id ? { ...t, status } : t))
-    if (selected?.id === id) setSelected(prev => prev ? { ...prev, status } : null)
+    await (supabase as any).from('tickets').update(patch).eq('id', id)
+    setTickets(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t))
+    setSelected(prev => prev && prev.id === id ? { ...prev, ...patch } : prev)
   }
 
   async function deleteTicket(id: string) {
@@ -68,19 +96,19 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
           <thead>
             <tr>
               <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] pl-4 pr-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[7%]">#</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[35%]">Description</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[13%]">Category</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[11%]">Priority</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[15%]">Reported</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[19%]">Status</th>
+              <SortHeader label="Description" col="title"      sort={sort} onSort={toggleSort} className="w-[33%]" />
+              <SortHeader label="Category"    col="category"   sort={sort} onSort={toggleSort} className="w-[13%]" />
+              <SortHeader label="Priority"    col="priority"   sort={sort} onSort={toggleSort} className="w-[11%]" />
+              <SortHeader label="Reported"    col="created_at" sort={sort} onSort={toggleSort} className="w-[15%]" />
+              <SortHeader label="Status"      col="status"     sort={sort} onSort={toggleSort} className="w-[21%]" />
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {sorted.length === 0 ? (
               <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-4">No tickets found</td></tr>
-            ) : filtered.map((t, i) => (
+            ) : sorted.map((t) => (
               <tr key={t.id} className="hover:bg-[var(--color-background-secondary)]">
-                <td className="pl-4 pr-2 py-2 text-[var(--color-text-secondary)] text-[11px] border-b border-[var(--color-border-tertiary)]">#{i + 1001}</td>
+                <td className="pl-4 pr-2 py-2 text-[var(--color-text-secondary)] text-[11px] border-b border-[var(--color-border-tertiary)]">#{numberById.get(t.id)}</td>
                 <td className="px-2 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
                   <button onClick={() => setSelected(t)} className="text-[#185FA5] hover:underline text-left truncate w-full">
                     {t.source === 'sms' && <i className="ti ti-message-2 text-[11px] mr-1" title="From text" />}
@@ -101,8 +129,9 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
       {selected && (
         <TicketDetail
           ticket={selected}
+          numberLabel={numberById.get(selected.id)}
           onClose={() => setSelected(null)}
-          onUpdateStatus={updateStatus}
+          onSave={updateTicket}
           onDelete={deleteTicket}
           onAttachmentsChange={updateAttachments}
         />
@@ -111,16 +140,42 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
   )
 }
 
-function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete, onAttachmentsChange }: {
+function SortHeader({ label, col, sort, onSort, className = '' }: {
+  label: string
+  col: SortKey
+  sort: { key: SortKey; dir: 1 | -1 }
+  onSort: (k: SortKey) => void
+  className?: string
+}) {
+  const active = sort.key === col
+  return (
+    <th className={`text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] ${className}`}>
+      <button onClick={() => onSort(col)} className={`inline-flex items-center gap-0.5 hover:text-[var(--color-text-primary)] ${active ? 'text-[var(--color-text-primary)]' : ''}`}>
+        {label}
+        <i className={`ti ${active ? (sort.dir === 1 ? 'ti-caret-up-filled' : 'ti-caret-down-filled') : 'ti-arrows-sort'} text-[11px] opacity-70`} />
+      </button>
+    </th>
+  )
+}
+
+function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAttachmentsChange }: {
   ticket: Ticket
+  numberLabel?: number
   onClose: () => void
-  onUpdateStatus: (id: string, status: TicketStatus) => Promise<void>
+  onSave: (id: string, patch: Partial<Ticket>) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onAttachmentsChange: (id: string, attachments: Attachment[]) => void
 }) {
-  const [saving, setSaving] = useState(false)
+  const CATEGORIES = useEquipmentCategories()
+  const [title, setTitle]           = useState(t.title)
+  const [category, setCategory]     = useState(t.category ?? '')
+  const [priority, setPriority]     = useState<TicketPriority>(t.priority)
+  const [assignedTo, setAssignedTo] = useState(t.assigned_to ?? '')
+  const [description, setDescription] = useState(t.description ?? '')
+  const [resolution, setResolution] = useState(t.resolution ?? '')
+  const [status, setStatus]         = useState<TicketStatus>(t.status)
+  const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [status, setStatus] = useState<TicketStatus>(t.status)
   const [attachments, setAttachments] = useState<Attachment[]>(t.ticket_attachments ?? [])
   const [uploading, setUploading] = useState(false)
 
@@ -147,8 +202,17 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete, onAttachme
   }
 
   async function save() {
+    if (!title.trim()) return
     setSaving(true)
-    await onUpdateStatus(t.id, status)
+    await onSave(t.id, {
+      title: title.trim(),
+      category: category || null,
+      priority,
+      assigned_to: assignedTo.trim() || null,
+      description: description.trim() || null,
+      resolution: resolution.trim() || null,
+      status,
+    })
     setSaving(false)
     onClose()
   }
@@ -159,37 +223,66 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete, onAttachme
     await onDelete(t.id)
   }
 
+  const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
+  const lbl = "block text-[11px] text-[var(--color-text-secondary)] mb-[3px]"
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/40 p-4">
-      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[520px] max-h-[82vh] overflow-y-auto p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Ticket</h2>
+      <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[520px] max-h-[85vh] overflow-y-auto p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Ticket {numberLabel ? `#${numberLabel}` : ''}</h2>
           <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
         </div>
 
-        {[
-          ['Description', t.title],
-          ['Category',    t.category ?? '—'],
-          ['Assigned to', t.assigned_to ?? '—'],
-          ['Source',      t.source === 'sms' ? `Text${t.reported_by ? ` · ${t.reported_by}` : ''}` : t.source],
-          ['Reported',    fmtDate(t.created_at)],
-        ].map(([l, v]) => (
-          <div key={l} className="flex justify-between py-[5px] border-b border-[var(--color-border-tertiary)] text-[12px]">
-            <span className="text-[var(--color-text-secondary)]">{l}</span>
-            <span className="font-medium text-[var(--color-text-primary)] text-right max-w-[65%]">{v}</span>
-          </div>
-        ))}
-        <div className="flex justify-between py-[5px] border-b border-[var(--color-border-tertiary)] text-[12px]">
-          <span className="text-[var(--color-text-secondary)]">Priority</span>
-          <PriorityBadge priority={t.priority} />
+        <div className="text-[11px] text-[var(--color-text-tertiary)] mb-3">
+          {t.source === 'sms' ? `From text${t.reported_by ? ` · ${t.reported_by}` : ''}` : `Source: ${t.source}`} · Reported {fmtDate(t.created_at)}
         </div>
 
-        {t.description && (
-          <>
-            <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)] mt-3 mb-2">Details</div>
-            <p className="text-[12px] text-[var(--color-text-primary)] leading-relaxed whitespace-pre-wrap">{t.description}</p>
-          </>
-        )}
+        <div className="space-y-[10px]">
+          <div>
+            <label className={lbl}>Description *</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={cls} />
+          </div>
+          <div className="grid grid-cols-2 gap-[10px]">
+            <div>
+              <label className={lbl}>Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className={cls}>
+                <option value="">— None —</option>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Priority</label>
+              <select value={priority} onChange={e => setPriority(e.target.value as TicketPriority)} className={cls}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className={lbl}>Assigned to</label>
+              <input type="text" value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className={cls} />
+            </div>
+            <div>
+              <label className={lbl}>Status</label>
+              <select value={status} onChange={e => setStatus(e.target.value as TicketStatus)} className={cls}>
+                <option value="open">Open</option>
+                <option value="in_progress">In progress</option>
+                <option value="resolved">Resolved</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={lbl}>Details</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className={`${cls} resize-y`} />
+          </div>
+          <div>
+            <label className={lbl}>Resolution (what we did)</label>
+            <textarea value={resolution} onChange={e => setResolution(e.target.value)} rows={3} placeholder="How the issue was fixed…" className={`${cls} resize-y`} />
+          </div>
+        </div>
 
         <div className="flex items-center justify-between mt-3 mb-2">
           <div className="text-[11px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">Photos / video</div>
@@ -230,22 +323,13 @@ function TicketDetail({ ticket: t, onClose, onUpdateStatus, onDelete, onAttachme
             <i className="ti ti-trash text-[13px]" /> {deleting ? 'Deleting…' : 'Delete'}
           </button>
           <div className="flex items-center gap-2">
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value as TicketStatus)}
-              className="text-[12px] px-2 py-[5px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
-            >
-              <option value="open">Open</option>
-              <option value="in_progress">In progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
+            <button type="button" onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
             <button
               onClick={save}
               disabled={saving}
               className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50"
             >
-              <i className="ti ti-check text-[13px]" /> {saving ? 'Saving…' : 'Update'}
+              <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
             </button>
           </div>
         </div>

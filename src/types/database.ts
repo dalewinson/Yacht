@@ -13,9 +13,9 @@ export interface Database {
         Update: { id?: string; name?: string; owner_name?: string; owner_phone?: string; notes?: string | null }
       }
       tickets: {
-        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; inspection_ref: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null; reported_by?: string | null; inspection_ref?: string | null }
-        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null; reported_by?: string | null; inspection_ref?: string | null }
+        Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; resolution: string | null; inspection_ref: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; vessel_id: string; title: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; source?: TicketSource; category?: string | null; assigned_to?: string | null; reported_by?: string | null; resolution?: string | null; inspection_ref?: string | null }
+        Update: { title?: string; description?: string | null; status?: TicketStatus; priority?: TicketPriority; category?: string | null; assigned_to?: string | null; reported_by?: string | null; resolution?: string | null; inspection_ref?: string | null }
       }
       ticket_attachments: {
         Row: { id: string; ticket_id: string; storage_path: string; content_type: string | null; created_at: string }
