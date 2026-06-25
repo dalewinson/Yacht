@@ -101,24 +101,31 @@ export async function POST(req: NextRequest) {
     const ctype = params[`MediaContentType${i}`] || 'application/octet-stream'
     if (!mediaUrl) continue
     try {
-      const headers: Record<string, string> = {}
-      if (accountSid && authToken) {
-        headers.Authorization = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64')
+      const auth = accountSid && authToken
+        ? 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64')
+        : ''
+      // Twilio's media URL 30x-redirects to a presigned S3 URL. Follow it
+      // manually so the Basic-auth header isn't forwarded to S3 (which would
+      // reject it). Hit Twilio with auth; fetch the S3 location without auth.
+      let res = await fetch(mediaUrl, { headers: auth ? { Authorization: auth } : {}, redirect: 'manual' })
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location')
+        if (loc) res = await fetch(loc)
       }
-      const res = await fetch(mediaUrl, { headers })
-      if (!res.ok) continue
+      if (!res.ok) { console.error(`[sms] media ${i} download failed: ${res.status}`); continue }
       const bytes = new Uint8Array(await res.arrayBuffer())
       const ext = ctype.split('/')[1]?.split(';')[0] || 'bin'
       const path = `${ticket.id}/${i}.${ext}`
       const { error: upErr } = await supabase.storage.from('ticket-media').upload(path, bytes, { contentType: ctype, upsert: true })
-      if (upErr) continue
+      if (upErr) { console.error(`[sms] media ${i} upload failed: ${upErr.message}`); continue }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('ticket_attachments').insert({ ticket_id: ticket.id, storage_path: path, content_type: ctype })
       saved++
-    } catch {
-      // skip a failed attachment, keep the ticket
+    } catch (e) {
+      console.error(`[sms] media ${i} error:`, e)
     }
   }
+  if (numMedia > 0 && !accountSid) console.error('[sms] TWILIO_ACCOUNT_SID missing — cannot fetch MMS media')
 
   const mediaNote = saved > 0 ? ` (${saved} photo${saved > 1 ? 's' : ''} attached)` : ''
   return twiml(`Got it — logged a ticket for ${matched.name}${mediaNote}. Thank you!`)
