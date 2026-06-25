@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const contact = ((crewRaw ?? []) as { id: string; name: string; phone: string | null }[])
     .find((c) => digitsOf(c.phone ?? '') === fromDigits) ?? null
 
-  const title = (body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${from || 'unknown'}`)
+  const title = (body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${contact?.name ?? from ?? 'unknown'}`)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: ticket, error: tErr } = await (supabase as any).from('tickets').insert({
