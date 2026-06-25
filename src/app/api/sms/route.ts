@@ -73,6 +73,12 @@ export async function POST(req: NextRequest) {
 
   const matched = vessels.find((v) => digitsOf(v.owner_phone ?? '') === fromDigits) ?? vessels[0]
 
+  // Try to attribute the ticket to a known contact on this boat by phone number;
+  // otherwise fall back to showing the raw sender number.
+  const { data: crewRaw } = await supabase.from('crew').select('id, name, phone').eq('vessel_id', matched.id)
+  const contact = ((crewRaw ?? []) as { id: string; name: string; phone: string | null }[])
+    .find((c) => digitsOf(c.phone ?? '') === fromDigits) ?? null
+
   const title = (body ? body.split('\n')[0].slice(0, 70) : `Photo report from ${from || 'unknown'}`)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,7 +88,8 @@ export async function POST(req: NextRequest) {
     description: body || null,
     source: 'sms',
     priority: 'medium',
-    reported_by: from || null,
+    reported_by: contact?.name ?? from ?? null,
+    reported_by_id: contact?.id ?? null,
   }).select().single()
 
   if (tErr || !ticket) return twiml('Sorry — could not log your report. Please try again.')

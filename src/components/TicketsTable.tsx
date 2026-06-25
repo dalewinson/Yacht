@@ -8,7 +8,7 @@ import StatusBadge from './StatusBadge'
 import PriorityBadge from './PriorityBadge'
 import NewTicketButton from './NewTicketButton'
 import { useEquipmentCategories } from './CategoriesProvider'
-import { useVesselEquipment } from '@/lib/use-equipment'
+import { useVesselEquipment, useVesselContacts } from '@/lib/use-equipment'
 import type { Database, TicketStatus, TicketPriority } from '@/types/database'
 
 type Attachment = TicketAttachment
@@ -169,9 +169,11 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
 }) {
   const CATEGORIES = useEquipmentCategories()
   const equipment = useVesselEquipment(t.vessel_id)
+  const contacts = useVesselContacts(t.vessel_id)
   const [title, setTitle]           = useState(t.title)
   const [category, setCategory]     = useState(t.category ?? '')
   const [equipmentId, setEquipmentId] = useState(t.equipment_id ?? '')
+  const [reportedById, setReportedById] = useState(t.reported_by_id ?? '')
   const [priority, setPriority]     = useState<TicketPriority>(t.priority)
   const [assignedTo, setAssignedTo] = useState(t.assigned_to ?? '')
   const [description, setDescription] = useState(t.description ?? '')
@@ -211,6 +213,8 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
       title: title.trim(),
       category: category || null,
       equipment_id: equipmentId || null,
+      reported_by_id: reportedById || null,
+      reported_by: reportedById ? (contacts.find(c => c.id === reportedById)?.name ?? null) : (t.reported_by_id ? null : t.reported_by),
       priority,
       assigned_to: assignedTo.trim() || null,
       description: description.trim() || null,
@@ -239,7 +243,8 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
         </div>
 
         <div className="text-[11px] text-[var(--color-text-tertiary)] mb-3">
-          {t.source === 'sms' ? `From text${t.reported_by ? ` · ${t.reported_by}` : ''}` : `Source: ${t.source}`} · Reported {fmtDate(t.created_at)}
+          {t.source === 'sms' ? 'From text' : `Source: ${t.source}`}
+          {t.reported_by ? ` · by ${t.reported_by}` : ''} · Reported {fmtDate(t.created_at)}
         </div>
 
         <div className="space-y-[10px]">
@@ -267,6 +272,13 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
             <div>
               <label className={lbl}>Assigned to</label>
               <input type="text" value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className={cls} />
+            </div>
+            <div>
+              <label className={lbl}>Reported by</label>
+              <select value={reportedById} onChange={e => setReportedById(e.target.value)} className={cls}>
+                <option value="">{t.reported_by && !t.reported_by_id ? t.reported_by : '— Select contact —'}</option>
+                {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
             <div>
               <label className={lbl}>Status</label>
