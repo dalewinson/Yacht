@@ -228,7 +228,7 @@ function TripModal({
             {field('Captain',
               <>
                 <input list="captain-list" value={captain} onChange={e => setCaptain(e.target.value)} placeholder="Name" className={cls} />
-                <datalist id="captain-list">{crew.map(c => <option key={c.name} value={c.name} />)}</datalist>
+                <datalist id="captain-list">{crew.filter(c => (c.role ?? '').toLowerCase() === 'captain').map(c => <option key={c.name} value={c.name} />)}</datalist>
               </>
             )}
             {field('Purpose', <select value={purpose} onChange={e => setPurpose(e.target.value)} className={cls}>{PURPOSES.map(p => <option key={p}>{p}</option>)}</select>)}
