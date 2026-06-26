@@ -132,6 +132,8 @@ function LogServiceModal({
   const [currentHours, setCurrentHours] = useState('')
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
+  // After saving, optionally resolve open tickets for the same equipment.
+  const [resolveStep, setResolveStep] = useState<{ saved: ServiceLog; tickets: { id: string; title: string }[]; checked: Set<string>; text: string } | null>(null)
 
   const selected = equipment.find(e => e.id === equipmentId) ?? null
   const eqTasks = selected ? (tasksByEq[selected.id] ?? []) : []
@@ -195,7 +197,36 @@ function LogServiceModal({
       await (supabase as any).from('service_tasks').update(patch).eq('id', t.id)
     }
 
+    // If this equipment has open tickets, offer to resolve them (new entries only).
+    if (!entry && selected) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: openT } = await (supabase as any)
+        .from('tickets').select('id,title')
+        .eq('vessel_id', vesselId).eq('equipment_id', selected.id)
+        .in('status', ['open', 'in_progress'])
+      const list = (openT ?? []) as { id: string; title: string }[]
+      if (list.length) {
+        setSaving(false)
+        setResolveStep({ saved: saved as ServiceLog, tickets: list, checked: new Set(list.map(t => t.id)), text: work.trim() })
+        return
+      }
+    }
+
     onSaved(saved as ServiceLog)
+  }
+
+  async function confirmResolve(resolve: boolean) {
+    if (!resolveStep) return
+    if (resolve) {
+      setSaving(true)
+      const supabase = createClient()
+      for (const t of resolveStep.tickets) {
+        if (!resolveStep.checked.has(t.id)) continue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('tickets').update({ status: 'resolved', resolution: resolveStep.text.trim() || null }).eq('id', t.id)
+      }
+    }
+    onSaved(resolveStep.saved)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -207,10 +238,42 @@ function LogServiceModal({
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/40 p-4">
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[520px] max-h-[85vh] overflow-y-auto p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">{entry ? 'Edit service record' : 'Log service'}</h2>
-          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
+          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">{resolveStep ? 'Resolve open tickets?' : entry ? 'Edit service record' : 'Log service'}</h2>
+          <button onClick={() => resolveStep ? confirmResolve(false) : onClose()} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
         </div>
 
+        {resolveStep ? (
+          <div className="space-y-3">
+            <p className="text-[12px] text-[var(--color-text-secondary)]">
+              {selected?.name} has {resolveStep.tickets.length} open ticket{resolveStep.tickets.length > 1 ? 's' : ''}. Mark any resolved with this service?
+            </p>
+            <div className="space-y-1.5">
+              {resolveStep.tickets.map(t => (
+                <label key={t.id} className="flex items-start gap-2 text-[12px] text-[var(--color-text-primary)] cursor-pointer">
+                  <input type="checkbox" className="mt-[3px]" checked={resolveStep.checked.has(t.id)}
+                    onChange={() => setResolveStep(prev => {
+                      if (!prev) return prev
+                      const checked = new Set(prev.checked)
+                      checked.has(t.id) ? checked.delete(t.id) : checked.add(t.id)
+                      return { ...prev, checked }
+                    })} />
+                  <span>{t.title}</span>
+                </label>
+              ))}
+            </div>
+            <div>
+              <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Resolution (saved on the resolved tickets)</label>
+              <textarea value={resolveStep.text} rows={2} onChange={e => setResolveStep(prev => prev ? { ...prev, text: e.target.value } : prev)} className={`${cls} resize-y`} />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => confirmResolve(false)} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">Skip</button>
+              <button type="button" onClick={() => confirmResolve(true)} disabled={saving || resolveStep.checked.size === 0}
+                className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
+                <i className="ti ti-check text-[13px]" /> {saving ? 'Resolving…' : `Resolve ${resolveStep.checked.size}`}
+              </button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={save} className="space-y-[10px]">
           <div className="grid grid-cols-2 gap-[10px]">
             {field('Equipment',
@@ -265,6 +328,7 @@ function LogServiceModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   )

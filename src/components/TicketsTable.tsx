@@ -181,6 +181,8 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
   const [status, setStatus]         = useState<TicketStatus>(t.status)
   const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // After resolving, optionally log a service record for the linked equipment.
+  const [logStep, setLogStep] = useState<{ work: string; date: string } | null>(null)
   const [attachments, setAttachments] = useState<Attachment[]>(t.ticket_attachments ?? [])
   const [uploading, setUploading] = useState(false)
 
@@ -222,6 +224,30 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
       status,
     })
     setSaving(false)
+    // Just resolved a ticket tied to equipment? Offer to log it as service.
+    const newlyResolved = status === 'resolved' && t.status !== 'resolved'
+    if (newlyResolved && equipmentId) {
+      setLogStep({ work: resolution.trim() || title.trim(), date: new Date().toISOString().slice(0, 10) })
+      return
+    }
+    onClose()
+  }
+
+  async function confirmLog(create: boolean) {
+    if (create && logStep) {
+      const eq = equipment.find(e => e.id === equipmentId)
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('service_log').insert({
+        vessel_id: t.vessel_id,
+        equipment_id: equipmentId || null,
+        equipment_name: eq?.name ?? 'Equipment',
+        date: logStep.date,
+        work_performed: logStep.work.trim() || title.trim(),
+        tech: assignedTo.trim() || null,
+      })
+    }
+    setLogStep(null)
     onClose()
   }
 
@@ -238,10 +264,32 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/40 p-4">
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] w-full max-w-[520px] max-h-[85vh] overflow-y-auto p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">Ticket {numberLabel ? `#${numberLabel}` : ''}</h2>
-          <button onClick={onClose} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
+          <h2 className="text-[15px] font-medium text-[var(--color-text-primary)]">{logStep ? 'Log this as service?' : `Ticket ${numberLabel ? `#${numberLabel}` : ''}`}</h2>
+          <button onClick={() => logStep ? confirmLog(false) : onClose()} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-xl leading-none">×</button>
         </div>
 
+        {logStep ? (
+          <div className="space-y-3">
+            <p className="text-[12px] text-[var(--color-text-secondary)]">
+              Add a service record for <span className="font-medium text-[var(--color-text-primary)]">{equipment.find(e => e.id === equipmentId)?.name ?? 'this equipment'}</span> so the fix shows in its service history?
+            </p>
+            <div>
+              <label className={lbl}>Work performed</label>
+              <textarea value={logStep.work} rows={2} onChange={e => setLogStep(prev => prev ? { ...prev, work: e.target.value } : prev)} className={`${cls} resize-y`} />
+            </div>
+            <div>
+              <label className={lbl}>Date</label>
+              <input type="date" value={logStep.date} onChange={e => setLogStep(prev => prev ? { ...prev, date: e.target.value } : prev)} className={cls} />
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button type="button" onClick={() => confirmLog(false)} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">Skip</button>
+              <button type="button" onClick={() => confirmLog(true)} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C]">
+                <i className="ti ti-clipboard-check text-[13px]" /> Log service
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         <div className="text-[11px] text-[var(--color-text-tertiary)] mb-3">
           {t.source === 'sms' ? 'From text' : `Source: ${t.source}`}
           {t.reported_by ? ` · by ${t.reported_by}` : ''} · Reported {fmtDate(t.created_at)}
@@ -356,6 +404,8 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   )
