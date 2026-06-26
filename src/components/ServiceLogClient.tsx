@@ -23,6 +23,10 @@ export default function ServiceLogClient({
   const [entries, setEntries] = useState<ServiceLog[]>(initial)
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<ServiceLog | null>(null)
+  const [eqFilter, setEqFilter] = useState('')
+
+  const eqNames = Array.from(new Set(entries.map(e => e.equipment_name))).sort((a, b) => a.localeCompare(b))
+  const shown = eqFilter ? entries.filter(e => e.equipment_name === eqFilter) : entries
 
   const tasksByEq: Record<string, Task[]> = {}
   for (const t of tasks) (tasksByEq[t.equipment_id] ??= []).push(t)
@@ -44,7 +48,22 @@ export default function ServiceLogClient({
 
   return (
     <>
-      <div className="flex justify-end mb-3.5">
+      <div className="flex items-center justify-between gap-2 mb-3.5">
+        <div className="flex items-center gap-2">
+          <select
+            value={eqFilter}
+            onChange={e => setEqFilter(e.target.value)}
+            className="px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)] max-w-[220px]"
+          >
+            <option value="">All equipment</option>
+            {eqNames.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          {eqFilter && (
+            <button onClick={() => setEqFilter('')} className="text-[11px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] inline-flex items-center gap-1">
+              <i className="ti ti-x text-[12px]" /> Clear
+            </button>
+          )}
+        </div>
         <button
           onClick={() => setShowNew(true)}
           disabled={!vesselId}
@@ -67,9 +86,9 @@ export default function ServiceLogClient({
             </tr>
           </thead>
           <tbody>
-            {entries.length === 0 ? (
-              <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-8">No service records yet. Click &quot;Log service&quot; to add the first.</td></tr>
-            ) : entries.map(e => (
+            {shown.length === 0 ? (
+              <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-8">{eqFilter ? `No service records for ${eqFilter}.` : 'No service records yet. Click “Log service” to add the first.'}</td></tr>
+            ) : shown.map(e => (
               <tr key={e.id} className="hover:bg-[var(--color-background-secondary)] align-top">
                 <td className="px-4 py-2 border-b border-[var(--color-border-tertiary)]">
                   <button onClick={() => setEditing(e)} className="text-[#185FA5] hover:underline">{fmtDate(e.date)}</button>
