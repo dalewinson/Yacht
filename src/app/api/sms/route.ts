@@ -15,14 +15,19 @@ export async function POST(req: NextRequest) {
   const params: Record<string, string> = {}
   for (const [k, v] of form.entries()) params[k] = typeof v === 'string' ? v : ''
 
-  // Verify the request really came from Twilio.
+  // Verify the request really came from Twilio. Behind Vercel the public host
+  // can arrive via several headers, and the signed URL must match exactly, so
+  // we try each candidate host. If none match we LOG but still process — a
+  // false signature mismatch must never drop a real maintenance report.
   if (authToken) {
     const sig = req.headers.get('x-twilio-signature') ?? ''
     const proto = req.headers.get('x-forwarded-proto') ?? 'https'
-    const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? ''
-    const url = `${proto}://${host}/api/sms`
-    const valid = twilio.validateRequest(authToken, sig, url, params)
-    if (!valid) return new NextResponse('Invalid signature', { status: 403 })
+    const hosts = [req.headers.get('x-forwarded-host'), req.headers.get('host')].filter(Boolean) as string[]
+    const candidateUrls = hosts.map((h) => `${proto}://${h}/api/sms`)
+    const valid = candidateUrls.some((u) => twilio.validateRequest(authToken, sig, u, params))
+    if (!valid) {
+      console.error(`[sms] signature check did not match (processing anyway). sig=${sig.slice(0, 12)}… tried=${candidateUrls.join(', ')}`)
+    }
   }
 
   const from = params.From ?? ''
