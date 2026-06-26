@@ -62,6 +62,14 @@ export default function InspectionsClient({
     setInspections(prev => prev.map(i => i.id === insp.id ? insp : i))
     setViewing(null)
   }
+  async function remove(insp: Inspection) {
+    if (!confirm(`Delete the ${insp.month} ${insp.year} inspection for ${insp.vessel_name}? This cannot be undone.`)) return
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any).from('inspections').delete().eq('id', insp.id)
+    if (error) { alert(`Could not delete: ${error.message}`); return }
+    setInspections(prev => prev.filter(i => i.id !== insp.id))
+  }
 
   return (
     <>
@@ -106,6 +114,9 @@ export default function InspectionsClient({
                     <a href={`/inspections/${insp.id}/report`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]" title="Printable report">
                       <i className="ti ti-printer text-[12px]" /> Report
                     </a>
+                    <button onClick={() => remove(insp)} className="inline-flex items-center justify-center w-[26px] h-[26px] text-[var(--color-text-tertiary)] hover:text-[#A32D2D] border border-transparent hover:border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)]" title="Delete inspection">
+                      <i className="ti ti-trash text-[13px]" />
+                    </button>
                   </div>
                 </td>
               </tr>
