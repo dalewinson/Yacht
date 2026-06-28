@@ -73,9 +73,14 @@ export interface Database {
         Update: { due_soon_days?: number; due_soon_hours?: number }
       }
       inspections: {
-        Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; created_at: string }
-        Insert: { id?: string; vessel_id: string; vessel_name: string; tech?: string | null; date: string; month: string; year: number; port_engine_hrs?: number | null; stbd_engine_hrs?: number | null; port_gen_hrs?: number | null; sections?: Record<string, unknown> }
-        Update: { tech?: string | null; sections?: Record<string, unknown> }
+        Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; template: unknown[] | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; vessel_name: string; tech?: string | null; date: string; month: string; year: number; port_engine_hrs?: number | null; stbd_engine_hrs?: number | null; port_gen_hrs?: number | null; sections?: Record<string, unknown>; template?: unknown[] | null }
+        Update: { tech?: string | null; sections?: Record<string, unknown>; template?: unknown[] | null }
+      }
+      inspection_templates: {
+        Row: { vessel_id: string; sections: unknown[]; updated_at: string }
+        Insert: { vessel_id: string; sections?: unknown[] }
+        Update: { sections?: unknown[] }
       }
       ticket_notes: {
         Row: { id: string; ticket_id: string; body: string; author: string; created_at: string }

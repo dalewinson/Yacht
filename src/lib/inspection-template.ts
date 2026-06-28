@@ -88,6 +88,76 @@ export const INSPECTION_SECTIONS: SectionDef[] = [
   },
 ]
 
+// The original Patron template doubles as the "Power" preset and the fallback
+// for any vessel/inspection that doesn't have its own stored template.
+export const PRESET_POWER: SectionDef[] = INSPECTION_SECTIONS
+
+// A sensible single-engine sailboat starting point.
+export const PRESET_SAILBOAT: SectionDef[] = [
+  {
+    id: 'engine',
+    label: 'Engine',
+    type: 'engine',
+    items: ['Oil Level','Antifreeze level','Oil hoses & lines','Air Cleaner','Belts','Fuel Filter','Fuel/Water Sep','Oil Filter','Saltwater Pump','Saltwater Impeller','Saltwater Seacock','Saltwater Strainer','Paint','Clean','Exhaust','Engine Mounts'],
+  },
+  {
+    id: 'batteries',
+    label: 'Batteries',
+    type: 'battery',
+    items: ['Start Bank','House Bank'],
+  },
+  {
+    id: 'instruments',
+    label: 'Instruments',
+    type: 'ok_only',
+    items: ["Rpm's",'Engine Oil Pressure','Water Temperature','Voltmeter','Depth','Wind','Speed/Log','GPS/Chartplotter'],
+  },
+  {
+    id: 'navigation',
+    label: 'Navigation',
+    type: 'ok_only',
+    items: ['Navigation','Radar','AIS','Autopilot','VHF Radio','Depth Sounder','Horn'],
+  },
+  {
+    id: 'rigging',
+    label: 'Rigging & Sails',
+    type: 'ok_only',
+    items: ['Standing rigging','Running rigging','Mainsail','Headsail','Winches','Furler','Boom & vang','Lifelines'],
+  },
+  {
+    id: 'lights',
+    label: 'Lights',
+    type: 'ok_only',
+    items: ['Port Running Light','Stbd Running Light','Steaming Light','Anchor Light','Stern Light','Cabin Lights'],
+  },
+  {
+    id: 'bilges',
+    label: 'Bilges / Pumps',
+    type: 'ok_only',
+    items: ['Bilge pump','Manual bilge pump','Fresh water pump','Black water pump'],
+  },
+  {
+    id: 'fire_ext',
+    label: 'Fire Extinguishers',
+    type: 'fire_ext',
+    items: ['Galley','Cabin','Cockpit'],
+  },
+  {
+    id: 'misc',
+    label: 'Misc',
+    type: 'ok_only',
+    items: ['Anchor windlass','Anchor & chain','Shore Power','Dock lines','Through-hulls','Stove/galley','Head','Tender'],
+  },
+]
+
+export const PRESET_BLANK: SectionDef[] = []
+
+export const TEMPLATE_PRESETS: { key: string; label: string; sections: SectionDef[] }[] = [
+  { key: 'power', label: 'Power — twin engine + genset', sections: PRESET_POWER },
+  { key: 'sailboat', label: 'Sailboat — single engine', sections: PRESET_SAILBOAT },
+  { key: 'blank', label: 'Blank — build from scratch', sections: PRESET_BLANK },
+]
+
 export type ItemData =
   | { level?: string; ok?: boolean; hrs_changed?: string; date_changed?: string; comments?: string }  // engine
   | { volts?: string; ok?: boolean; comments?: string }  // battery
@@ -104,9 +174,9 @@ export interface SectionData {
 
 export type InspectionSections = Record<string, SectionData>
 
-export function emptyInspection(): InspectionSections {
+export function emptyInspection(template: SectionDef[] = INSPECTION_SECTIONS): InspectionSections {
   const out: InspectionSections = {}
-  for (const sec of INSPECTION_SECTIONS) {
+  for (const sec of template) {
     const items: Record<string, ItemData> = {}
     for (const name of sec.items) {
       if (sec.type === 'engine')        items[name] = { ok: true, level: '', hrs_changed: '', date_changed: '', comments: '' }

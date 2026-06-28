@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import {
-  INSPECTION_SECTIONS,
   emptyInspection,
   type SectionDef,
   type InspectionSections,
@@ -27,6 +26,7 @@ type Inspection = {
   stbd_engine_hrs: number | null
   port_gen_hrs: number | null
   sections: InspectionSections
+  template?: SectionDef[] | null
   created_at: string
 }
 
@@ -44,11 +44,13 @@ export default function InspectionsClient({
   inspections: initial,
   equipment,
   links,
+  template,
 }: {
   vessels: Vessel[]
   inspections: Inspection[]
   equipment: Equipment[]
   links: LinkRow[]
+  template: SectionDef[]
 }) {
   const [inspections, setInspections] = useState<Inspection[]>(initial)
   const [showNew, setShowNew] = useState(false)
@@ -126,10 +128,10 @@ export default function InspectionsClient({
       </div>
 
       {showNew && (
-        <InspectionForm vessels={vessels} equipment={equipment} links={links} onClose={() => setShowNew(false)} onSaved={handleCreated} />
+        <InspectionForm vessels={vessels} equipment={equipment} links={links} template={template} onClose={() => setShowNew(false)} onSaved={handleCreated} />
       )}
       {viewing && (
-        <InspectionForm vessels={vessels} equipment={equipment} links={links} existing={viewing} onClose={() => setViewing(null)} onSaved={handleUpdated} />
+        <InspectionForm vessels={vessels} equipment={equipment} links={links} template={template} existing={viewing} onClose={() => setViewing(null)} onSaved={handleUpdated} />
       )}
     </>
   )
@@ -152,23 +154,27 @@ type Candidate = {
 }
 
 function InspectionForm({
-  vessels, equipment, links: initialLinks, existing, onClose, onSaved,
+  vessels, equipment, links: initialLinks, template, existing, onClose, onSaved,
 }: {
   vessels: Vessel[]
   equipment: Equipment[]
   links: LinkRow[]
+  template: SectionDef[]
   existing?: Inspection
   onClose: () => void
   onSaved: (insp: Inspection) => void
 }) {
   const today = new Date()
+  // Existing inspections render against their own frozen snapshot; new ones use
+  // the vessel's current template.
+  const tmpl: SectionDef[] = (existing?.template && existing.template.length ? existing.template : template)
   const [vesselId, setVesselId] = useState(existing?.vessel_id ?? vessels[0]?.id ?? '')
   const [tech, setTech] = useState(existing?.tech ?? 'Dale')
   const [month, setMonth] = useState(existing?.month ?? MONTHS[today.getMonth()])
   const [year, setYear] = useState(existing?.year ?? today.getFullYear())
   const [date, setDate] = useState(existing?.date ?? today.toISOString().slice(0, 10))
-  const [sections, setSections] = useState<InspectionSections>(existing?.sections ?? emptyInspection())
-  const [activeSec, setActiveSec] = useState(INSPECTION_SECTIONS[0].id)
+  const [sections, setSections] = useState<InspectionSections>(existing?.sections ?? emptyInspection(tmpl))
+  const [activeSec, setActiveSec] = useState(tmpl[0]?.id ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -218,6 +224,7 @@ function InspectionForm({
       stbd_engine_hrs: stbdSec?.hours ? parseInt(stbdSec.hours) : null,
       port_gen_hrs: portGenSec?.hours ? parseInt(portGenSec.hours) : null,
       sections,
+      template: tmpl,
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,7 +251,7 @@ function InspectionForm({
     }
 
     // 2) sync engine/gen hours -> equipment.current_hours
-    for (const sec of INSPECTION_SECTIONS.filter(s => s.type === 'engine')) {
+    for (const sec of tmpl.filter(s => s.type === 'engine')) {
       const eqId = getLink(sec.id, '')
       const hrs = (sections[sec.id] as SectionData)?.hours
       if (eqId && hrs) {
@@ -262,7 +269,7 @@ function InspectionForm({
 
     // 4) gather flagged items -> ticket candidates
     const candidates: Candidate[] = []
-    for (const sec of INSPECTION_SECTIONS) {
+    for (const sec of tmpl) {
       const secData = sections[sec.id] as SectionData | undefined
       if (!secData?.items) continue
       for (const itemName of sec.items) {
@@ -305,7 +312,7 @@ function InspectionForm({
     onSaved(data as Inspection)
   }
 
-  const secDef = INSPECTION_SECTIONS.find(s => s.id === activeSec)!
+  const secDef = tmpl.find(s => s.id === activeSec) ?? tmpl[0]
   const secData: SectionData = sections[activeSec] ?? { items: {} }
 
   return (
@@ -336,7 +343,7 @@ function InspectionForm({
 
         <div className="flex flex-1 overflow-hidden">
           <div className="w-[150px] flex-shrink-0 border-r border-[var(--color-border-tertiary)] overflow-y-auto bg-[var(--color-background-secondary)]">
-            {INSPECTION_SECTIONS.map(sec => (
+            {tmpl.map(sec => (
               <button key={sec.id} onClick={() => setActiveSec(sec.id)}
                 className={`w-full text-left px-3 py-2 text-[11px] border-b border-[var(--color-border-tertiary)] transition-colors ${activeSec === sec.id ? 'bg-[#185FA5] text-white font-medium' : 'text-[var(--color-text-primary)] hover:bg-[var(--color-background-tertiary)]'}`}>
                 {sec.label}
@@ -345,15 +352,19 @@ function InspectionForm({
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            <SectionEditor
-              secDef={secDef}
-              secData={secData}
-              equipment={equipment}
-              getLink={getLink}
-              setLink={setLink}
-              onUpdateItem={(item, field, val) => updateItem(activeSec, item, field, val)}
-              onUpdateSection={(field, val) => updateSection(activeSec, field, val)}
-            />
+            {secDef ? (
+              <SectionEditor
+                secDef={secDef}
+                secData={secData}
+                equipment={equipment}
+                getLink={getLink}
+                setLink={setLink}
+                onUpdateItem={(item, field, val) => updateItem(activeSec, item, field, val)}
+                onUpdateSection={(field, val) => updateSection(activeSec, field, val)}
+              />
+            ) : (
+              <p className="text-[12px] text-[var(--color-text-secondary)]">This vessel&apos;s inspection template has no sections yet.</p>
+            )}
           </div>
         </div>
 

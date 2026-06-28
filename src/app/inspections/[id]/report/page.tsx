@@ -59,10 +59,13 @@ export default async function InspectionReportPage({ params }: { params: Promise
   }
 
   const sections = (data.sections ?? {}) as Record<string, SectionData>
+  // Render against the inspection's own frozen template; fall back to the
+  // built-in default for older inspections saved before templates existed.
+  const template: SectionDef[] = (data.template && data.template.length ? data.template : INSPECTION_SECTIONS)
 
   // Flagged items summary
   const flagged: { section: string; item: string; note: string }[] = []
-  for (const sec of INSPECTION_SECTIONS) {
+  for (const sec of template) {
     const items = sections[sec.id]?.items ?? {}
     for (const name of sec.items) {
       const d = (items[name] ?? {}) as ItemData
@@ -124,7 +127,7 @@ export default async function InspectionReportPage({ params }: { params: Promise
         </div>
 
         {/* Sections */}
-        {INSPECTION_SECTIONS.map(sec => {
+        {template.map(sec => {
           const secData = sections[sec.id] ?? {}
           const items = secData.items ?? {}
           const cols = midColumns(sec)
