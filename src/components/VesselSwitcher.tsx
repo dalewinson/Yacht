@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ACTIVE_VESSEL_COOKIE, type VesselLite } from '@/lib/vessel-shared'
+import { TEMPLATE_PRESETS } from '@/lib/inspection-template'
 
 function setActiveVessel(id: string) {
   document.cookie = `${ACTIVE_VESSEL_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax`
@@ -83,6 +84,7 @@ function AddBoatModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
   const [name, setName] = useState('')
   const [ownerName, setOwnerName] = useState('')
   const [ownerPhone, setOwnerPhone] = useState('')
+  const [preset, setPreset] = useState('power')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -99,7 +101,12 @@ function AddBoatModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
       owner_phone: ownerPhone.trim() || '—',
     }).select().single()
     if (err) { setError(err.message); setSaving(false); return }
-    onCreated((data as { id: string }).id)
+    const newId = (data as { id: string }).id
+    // Seed the boat's inspection template from the chosen preset.
+    const sections = TEMPLATE_PRESETS.find(p => p.key === preset)?.sections ?? []
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('inspection_templates').insert({ vessel_id: newId, sections })
+    onCreated(newId)
   }
 
   const input = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -123,6 +130,13 @@ function AddBoatModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
           <div>
             <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Owner phone</label>
             <input type="text" value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="+1…" className={input} />
+          </div>
+          <div>
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Inspection template</label>
+            <select value={preset} onChange={(e) => setPreset(e.target.value)} className={input}>
+              {TEMPLATE_PRESETS.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
+            </select>
+            <p className="text-[10px] text-[var(--color-text-tertiary)] mt-1">You can fully customize this later under Inspections → Customize template.</p>
           </div>
           {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
