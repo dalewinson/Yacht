@@ -75,6 +75,12 @@ export default function TemplateEditor({
     setSections(JSON.parse(JSON.stringify(preset.sections)))
   }
 
+  // Which preset (if any) the current draft matches, so the user can see what
+  // it's based on; becomes "Custom" once they diverge.
+  const norm = (secs: SectionDef[]) => JSON.stringify(secs)
+  const matched = TEMPLATE_PRESETS.find(p => norm(p.sections) === norm(sections))
+  const currentLabel = sections.length === 0 ? 'Empty' : matched ? matched.label : 'Custom'
+
   const cls = "px-[7px] py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
 
   return (
@@ -89,9 +95,14 @@ export default function TemplateEditor({
         </div>
 
         <div className="flex items-center justify-between px-5 py-2 border-b border-[var(--color-border-tertiary)] flex-shrink-0">
-          <button onClick={addSection} className="inline-flex items-center gap-1 px-2.5 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
-            <i className="ti ti-plus text-[12px]" /> Add section
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={addSection} className="inline-flex items-center gap-1 px-2.5 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
+              <i className="ti ti-plus text-[12px]" /> Add section
+            </button>
+            <span className="text-[11px] text-[var(--color-text-secondary)]">
+              Current: <span className="font-medium text-[var(--color-text-primary)]">{currentLabel}</span>
+            </span>
+          </div>
           <label className="text-[11px] text-[var(--color-text-secondary)] inline-flex items-center gap-1.5">
             Start from preset:
             <select defaultValue="" onChange={e => { if (e.target.value) { applyPreset(e.target.value); e.target.value = '' } }} className={cls}>
