@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ACTIVE_VESSEL_COOKIE, type VesselLite } from '@/lib/vessel-shared'
 import { TEMPLATE_PRESETS } from '@/lib/inspection-template'
@@ -17,16 +16,18 @@ export default function VesselSwitcher({
   vessels: VesselLite[]
   activeId: string | null
 }) {
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
 
   const active = vessels.find((v) => v.id === activeId) ?? null
 
   function choose(id: string) {
+    if (id === activeId) { setOpen(false); return }
     setActiveVessel(id)
     setOpen(false)
-    router.refresh()
+    // Full reload so every page's data (and client-side list state) reflects the
+    // new boat. router.refresh() alone leaves client components on stale state.
+    window.location.reload()
   }
 
   return (
