@@ -151,7 +151,6 @@ function TripModal({
   async function save(ev: React.FormEvent) {
     ev.preventDefault()
     setSaving(true); setError('')
-    const supabase = createClient()
 
     const payload = {
       vessel_id: vesselId,
@@ -171,27 +170,39 @@ function TripModal({
       notes: notes.trim() || null,
     }
 
-    let data, err
-    if (trip) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;({ data, error: err } = await (supabase as any).from('trips').update(payload).eq('id', trip.id).select().single())
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;({ data, error: err } = await (supabase as any).from('trips').insert(payload).select().single())
-    }
-    if (err) { setError(err.message); setSaving(false); return }
+    try {
+      const supabase = createClient()
+      let data, err
+      if (trip) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;({ data, error: err } = await (supabase as any).from('trips').update(payload).eq('id', trip.id).select().single())
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;({ data, error: err } = await (supabase as any).from('trips').insert(payload).select().single())
+      }
+      if (err) { setError(err.message); return }
 
-    // Two-way hours sync: push ending hours to each equipment's current hours.
-    const syncs: { id: string; hrs: number }[] = []
-    if (portEng && int(pEnd) != null) syncs.push({ id: portEng.id, hrs: int(pEnd)! })
-    if (stbdEng && int(sEnd) != null) syncs.push({ id: stbdEng.id, hrs: int(sEnd)! })
-    if (genId && int(genEnd) != null) syncs.push({ id: genId, hrs: int(genEnd)! })
-    for (const sync of syncs) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('equipment').update({ current_hours: sync.hrs }).eq('id', sync.id)
-    }
+      // Two-way hours sync (best-effort — the log entry is already saved, so a
+      // failure here must not block completion or trigger a duplicate save).
+      try {
+        const syncs: { id: string; hrs: number }[] = []
+        if (portEng && int(pEnd) != null) syncs.push({ id: portEng.id, hrs: int(pEnd)! })
+        if (stbdEng && int(sEnd) != null) syncs.push({ id: stbdEng.id, hrs: int(sEnd)! })
+        if (genId && int(genEnd) != null) syncs.push({ id: genId, hrs: int(genEnd)! })
+        for (const sync of syncs) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from('equipment').update({ current_hours: sync.hrs }).eq('id', sync.id)
+        }
+      } catch { /* hours sync is best-effort */ }
 
-    onSaved(data as Trip)
+      onSaved(data as Trip)
+    } catch {
+      // Network/fetch failure (e.g. weak signal). Keep the form as-is so nothing
+      // is lost and the user can simply tap Save again.
+      setError('Couldn’t save — check your connection and tap Save again. Your entries are still here.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function remove() {
