@@ -199,13 +199,13 @@ export default function ManualsClient({
 
         {/* Library table */}
         <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-          <table className="w-full min-w-[480px] text-[12px] border-collapse table-fixed">
+          <table className="w-full sm:min-w-[480px] text-[12px] border-collapse table-fixed">
             <thead>
               <tr>
-                <th className="w-[8%] border-b border-[var(--color-border-tertiary)] pb-[7px] pt-3"></th>
-                <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[40%]">Manual</th>
-                <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[24%]">Equipment</th>
-                <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Size</th>
+                <th className="w-[10%] sm:w-[8%] border-b border-[var(--color-border-tertiary)] pb-[7px] pt-3"></th>
+                <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[50%] sm:w-[40%]">Manual</th>
+                <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[24%]">Equipment</th>
+                <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Size</th>
                 <th className="w-[14%] border-b border-[var(--color-border-tertiary)]"></th>
               </tr>
             </thead>
@@ -226,8 +226,8 @@ export default function ManualsClient({
                       ? <span className="text-[10px] text-[#185FA5]">Reading text…</span>
                       : m.category && <span className="text-[10px] text-[var(--color-text-tertiary)]">{m.category}</span>}
                   </td>
-                  <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)] truncate">{equipName(m.equipment_id) ?? '—'}</td>
-                  <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtSize(m.size_bytes)}</td>
+                  <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)] truncate">{equipName(m.equipment_id) ?? '—'}</td>
+                  <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtSize(m.size_bytes)}</td>
                   <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-right">
                     <button onClick={() => deleteManual(m)} className="text-[var(--color-text-tertiary)] hover:text-[#A32D2D]" title="Delete">
                       <i className="ti ti-trash text-[14px]" />

@@ -88,15 +88,15 @@ export default function ServiceLogClient({
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[680px] text-[12px] border-collapse table-fixed">
+        <table className="w-full sm:min-w-[680px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[13%]">Date</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[20%]">Equipment</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[34%]">Work performed</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[13%]">Tech</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Cost</th>
-              <th className="w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[22%] sm:w-[13%]">Date</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[20%]">Equipment</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[58%] sm:w-[34%]">Work performed</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[13%]">Tech</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Cost</th>
+              <th className="w-[20%] sm:w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
             </tr>
           </thead>
           <tbody>
@@ -107,13 +107,14 @@ export default function ServiceLogClient({
                 <td className="px-4 py-2 border-b border-[var(--color-border-tertiary)]">
                   <button onClick={() => setEditing(e)} className="text-[#185FA5] hover:underline">{fmtDate(e.date)}</button>
                 </td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] font-medium overflow-hidden text-ellipsis">{e.equipment_name}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] font-medium overflow-hidden text-ellipsis">{e.equipment_name}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-primary)]">
+                  <span className="sm:hidden block text-[10px] text-[var(--color-text-tertiary)]">{e.equipment_name}</span>
                   {e.work_performed}
                   {e.parts_used && <span className="block text-[10px] text-[var(--color-text-tertiary)] mt-0.5">Parts: {e.parts_used}</span>}
                 </td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.tech ?? '—'}</td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtCost(e.cost)}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.tech ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtCost(e.cost)}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-right whitespace-nowrap">
                   <button onClick={() => setEditing(e)} className="text-[var(--color-text-tertiary)] hover:text-[#185FA5] mr-2" title="Edit">
                     <i className="ti ti-edit text-[14px]" />

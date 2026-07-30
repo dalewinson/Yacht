@@ -90,15 +90,15 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[760px] text-[12px] border-collapse table-fixed">
+        <table className="w-full sm:min-w-[760px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[24%]">Equipment</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Category</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[18%]">Make / model</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[28%]">Next service</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[8%]">Status</th>
-              <th className="w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[45%] sm:w-[24%]">Equipment</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Category</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[18%]">Make / model</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[35%] sm:w-[28%]">Next service</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[20%] sm:w-[8%]">Status</th>
+              <th className="hidden sm:table-cell w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
             </tr>
           </thead>
           <tbody>
@@ -111,11 +111,11 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
                   <td className="px-4 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
                     <button onClick={() => setSelected(e)} className="text-[#185FA5] hover:underline text-left">{e.name}</button>
                   </td>
-                  <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.category}</td>
-                  <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{e.model ?? '—'}</td>
+                  <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.category}</td>
+                  <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{e.model ?? '—'}</td>
                   <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{roll.label}</td>
                   <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]"><ServiceStatusBadge status={roll.status} /></td>
-                  <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
+                  <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)]">
                     <button onClick={() => setSelected(e)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">
                       <i className="ti ti-edit text-[12px]" />
                     </button>

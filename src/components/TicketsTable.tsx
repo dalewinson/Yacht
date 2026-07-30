@@ -104,14 +104,14 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[680px] text-[12px] border-collapse table-fixed">
+        <table className="w-full sm:min-w-[680px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] pl-4 pr-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[7%]">#</th>
-              <SortHeader label="Description" col="title"      sort={sort} onSort={toggleSort} className="w-[33%]" />
-              <SortHeader label="Category"    col="category"   sort={sort} onSort={toggleSort} className="w-[13%]" />
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] pl-4 pr-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[7%]">#</th>
+              <SortHeader label="Description" col="title"      sort={sort} onSort={toggleSort} className="w-[40%] sm:w-[33%]" />
+              <SortHeader label="Category"    col="category"   sort={sort} onSort={toggleSort} className="w-[13%] hidden sm:table-cell" />
               <SortHeader label="Priority"    col="priority"   sort={sort} onSort={toggleSort} className="w-[11%]" />
-              <SortHeader label="Reported"    col="created_at" sort={sort} onSort={toggleSort} className="w-[15%]" />
+              <SortHeader label="Reported"    col="created_at" sort={sort} onSort={toggleSort} className="w-[15%] hidden sm:table-cell" />
               <SortHeader label="Status"      col="status"     sort={sort} onSort={toggleSort} className="w-[21%]" />
             </tr>
           </thead>
@@ -120,7 +120,7 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
               <tr><td colSpan={6} className="text-center text-[var(--color-text-secondary)] py-4">No tickets found</td></tr>
             ) : sorted.map((t) => (
               <tr key={t.id} className="hover:bg-[var(--color-background-secondary)]">
-                <td className="pl-4 pr-2 py-2 text-[var(--color-text-secondary)] text-[11px] border-b border-[var(--color-border-tertiary)]">#{numberById.get(t.id)}</td>
+                <td className="hidden sm:table-cell pl-4 pr-2 py-2 text-[var(--color-text-secondary)] text-[11px] border-b border-[var(--color-border-tertiary)]">#{numberById.get(t.id)}</td>
                 <td className="px-2 py-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
                   <button onClick={() => setSelected(t)} className="text-[#185FA5] hover:underline text-left truncate w-full">
                     {t.source === 'sms' && <i className="ti ti-message-2 text-[11px] mr-1" title="From text" />}
@@ -128,9 +128,9 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
                     {t.ticket_attachments && t.ticket_attachments.length > 0 && <i className="ti ti-paperclip text-[11px] ml-1 text-[var(--color-text-tertiary)]" />}
                   </button>
                 </td>
-                <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.category ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.category ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]"><PriorityBadge priority={t.priority} /></td>
-                <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtDate(t.created_at)}</td>
+                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtDate(t.created_at)}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]"><StatusBadge status={t.status} /></td>
               </tr>
             ))}

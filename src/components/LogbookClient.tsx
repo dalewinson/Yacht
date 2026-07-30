@@ -48,15 +48,15 @@ export default function LogbookClient({
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[720px] text-[12px] border-collapse table-fixed">
+        <table className="w-full sm:min-w-[720px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Date</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Purpose</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Captain</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[26%]">Cruise area</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[20%]">Eng hrs (P/S)</th>
-              <th className="w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[34%] sm:w-[14%]">Date</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[46%] sm:w-[16%]">Purpose</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Captain</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[26%]">Cruise area</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[20%]">Eng hrs (P/S)</th>
+              <th className="w-[20%] sm:w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
             </tr>
           </thead>
           <tbody>
@@ -68,9 +68,9 @@ export default function LogbookClient({
                   <button onClick={() => setEditing(t)} className="text-[#185FA5] hover:underline">{fmtDate(t.date)}</button>
                 </td>
                 <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.purpose ?? '—'}</td>
-                <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.captain ?? '—'}</td>
-                <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">{t.cruise_area ?? '—'}</td>
-                <td className="px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.port_engine_end ?? '—'} / {t.stbd_engine_end ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.captain ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">{t.cruise_area ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{t.port_engine_end ?? '—'} / {t.stbd_engine_end ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
                   <button onClick={() => setEditing(t)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
                     <i className="ti ti-edit text-[12px]" />

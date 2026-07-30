@@ -86,16 +86,16 @@ export default function PartsClient({
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full min-w-[820px] text-[12px] border-collapse table-fixed">
+        <table className="w-full sm:min-w-[820px] text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[22%]">Part</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Equipment</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Location</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Part #</th>
-              <th className="text-center font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">On hand</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Supplier</th>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[8%]">Cost</th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[55%] sm:w-[22%]">Part</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Equipment</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[16%]">Location</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Part #</th>
+              <th className="text-center font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[45%] sm:w-[16%]">On hand</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[12%]">Supplier</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[8%]">Cost</th>
             </tr>
           </thead>
           <tbody>
@@ -107,9 +107,9 @@ export default function PartsClient({
                   <button onClick={() => setEditing(p)} className="text-[#185FA5] hover:underline text-left">{p.name}</button>
                   <span className="block text-[10px] text-[var(--color-text-tertiary)]">{p.category}</span>
                 </td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.equipment_name ?? '—'}</td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.location ?? '—'}</td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.part_number ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.equipment_name ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.location ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.part_number ?? '—'}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
                   <div className="flex items-center justify-center gap-1.5">
                     <button onClick={() => adjustQty(p, -1)} className="w-5 h-5 rounded border border-[var(--color-border-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)] leading-none">−</button>
@@ -121,8 +121,8 @@ export default function PartsClient({
                   </div>
                   <div className="text-[9px] text-[var(--color-text-tertiary)] text-center mt-0.5">reorder at {p.reorder_at}</div>
                 </td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.supplier ?? '—'}</td>
-                <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtCost(p.unit_cost)}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] overflow-hidden text-ellipsis whitespace-nowrap">{p.supplier ?? '—'}</td>
+                <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{fmtCost(p.unit_cost)}</td>
               </tr>
             ))}
           </tbody>
