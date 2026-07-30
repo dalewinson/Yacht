@@ -36,20 +36,20 @@ export default async function AlertsPage() {
     const eq = eqById.get(t.equipment_id)
     if (!eq) continue
     const svc = computeTask(t as TaskLike, eq.current_hours, { leadDays: ds.days, leadHours: ds.hours })
-    if (svc.status === 'overdue') alerts.push({ severity: 'high', title: `${eq.name} — ${t.name} overdue`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
-    else if (svc.status === 'due') alerts.push({ severity: 'med', title: `${eq.name} — ${t.name} due soon`, detail: svc.label, href: '/equipment', icon: 'ti-tools' })
+    if (svc.status === 'overdue') alerts.push({ severity: 'high', title: `${eq.name} — ${t.name} overdue`, detail: svc.label, href: `/equipment?open=${eq.id}`, icon: 'ti-tools' })
+    else if (svc.status === 'due') alerts.push({ severity: 'med', title: `${eq.name} — ${t.name} due soon`, detail: svc.label, href: `/equipment?open=${eq.id}`, icon: 'ti-tools' })
   }
 
   for (const t of tickets) {
     const openish = t.status !== 'resolved' && t.status !== 'closed'
     if (openish && (t.priority === 'urgent' || t.priority === 'high')) {
-      alerts.push({ severity: t.priority === 'urgent' ? 'high' : 'med', title: t.title, detail: `${t.priority} priority ticket`, href: '/tickets', icon: 'ti-ticket' })
+      alerts.push({ severity: t.priority === 'urgent' ? 'high' : 'med', title: t.title, detail: `${t.priority} priority ticket`, href: `/tickets?open=${t.id}`, icon: 'ti-ticket' })
     }
   }
 
   for (const p of parts) {
     if (p.qty_on_hand <= p.reorder_at) {
-      alerts.push({ severity: 'med', title: `${p.name} — low stock`, detail: `${p.qty_on_hand} on hand (reorder at ${p.reorder_at})`, href: '/parts', icon: 'ti-package' })
+      alerts.push({ severity: 'med', title: `${p.name} — low stock`, detail: `${p.qty_on_hand} on hand (reorder at ${p.reorder_at})`, href: `/parts?open=${p.id}`, icon: 'ti-package' })
     }
   }
 
