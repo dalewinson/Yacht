@@ -20,18 +20,37 @@ export default function DigestSettings({ enabled: e0, day: d0, hour: h0, adminEm
   const [adminEmail, setEmail] = useState(a0 ?? '')
   const [saving, setSaving]   = useState(false)
   const [msg, setMsg]         = useState('')
+  const [testing, setTesting] = useState(false)
+  const [testMsg, setTestMsg] = useState('')
+
+  async function persist() {
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (supabase as any).from('app_settings')
+      .update({ digest_enabled: enabled, digest_day: day, digest_hour: hour, digest_admin_email: adminEmail.trim() || null })
+      .eq('id', 1)
+  }
 
   async function save() {
     setSaving(true); setMsg('')
-    const supabase = createClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('app_settings')
-      .update({ digest_enabled: enabled, digest_day: day, digest_hour: hour, digest_admin_email: adminEmail.trim() || null })
-      .eq('id', 1)
+    const { error } = await persist()
     setSaving(false)
     if (error) { setMsg(error.message); return }
     setMsg('Saved.')
     router.refresh()
+  }
+
+  async function sendTest() {
+    setTesting(true); setTestMsg('')
+    await persist() // make sure the saved admin email matches what's on screen
+    try {
+      const res = await fetch('/api/digest/test', { method: 'POST' })
+      const data = await res.json()
+      setTestMsg(data.ok ? `Sent — check ${adminEmail || 'your inbox'}.` : (data.error || 'Could not send.'))
+    } catch {
+      setTestMsg('Could not send — try again.')
+    }
+    setTesting(false)
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -74,14 +93,22 @@ export default function DigestSettings({ enabled: e0, day: d0, hour: h0, adminEm
 
       <div className="mt-3 rounded-[var(--border-radius-md)] bg-[var(--color-background-secondary)] px-3 py-2 text-[11px] text-[var(--color-text-secondary)]">
         <i className="ti ti-info-circle text-[12px] mr-1" />
-        Email sending isn&apos;t connected yet — use <strong>Preview</strong> to see the content. We&apos;ll switch on real delivery once an email provider is chosen. (On the current hosting plan the send time may be approximate.)
+        Delivery is via Resend once <strong>RESEND_API_KEY</strong> and <strong>DIGEST_FROM</strong> are set in Vercel. Use <strong>Preview</strong> to see the content and <strong>Send test</strong> to email yourself a copy. (On the current hosting plan the send time may be approximate.)
       </div>
 
-      <div className="flex items-center justify-end gap-3 mt-3">
-        {msg && <span className="text-[12px] text-[#3B6D11]">{msg}</span>}
-        <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 px-3 py-[6px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
-          <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
-        </button>
+      <div className="flex items-center justify-between gap-3 mt-3">
+        <div className="flex items-center gap-3">
+          <button onClick={sendTest} disabled={testing} className="inline-flex items-center gap-1 px-3 py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)] disabled:opacity-50">
+            <i className="ti ti-send text-[13px]" /> {testing ? 'Sending…' : 'Send test'}
+          </button>
+          {testMsg && <span className="text-[11px] text-[var(--color-text-secondary)]">{testMsg}</span>}
+        </div>
+        <div className="flex items-center gap-3">
+          {msg && <span className="text-[12px] text-[#3B6D11]">{msg}</span>}
+          <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 px-3 py-[6px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
+            <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   )
