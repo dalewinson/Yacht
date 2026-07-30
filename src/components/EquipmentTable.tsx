@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
@@ -11,6 +12,7 @@ import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type Task = Database['public']['Tables']['service_tasks']['Row']
+type ServiceLog = Database['public']['Tables']['service_log']['Row']
 
 const STARTER_TASKS: { name: string; interval_type: IntervalType; interval_value: number }[] = [
   { name: 'Oil & filter',                 interval_type: 'hours',  interval_value: 150 },
@@ -296,6 +298,18 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
 
+  // Completed service history for this equipment (loaded on demand).
+  const [history, setHistory] = useState<ServiceLog[]>([])
+  useEffect(() => {
+    const supabase = createClient()
+    ;(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from('service_log').select('*').eq('equipment_id', e.id).order('date', { ascending: false })
+      setHistory((data ?? []) as ServiceLog[])
+    })()
+  }, [e.id])
+  const historyTotal = history.reduce((s, r) => s + (r.cost ?? 0), 0)
+
   const ds = useDueSoon()
   const curHrs = currentHours ? parseInt(currentHours) : null
   const hasHoursTask = tasks.some(t => t.interval_type === 'hours')
@@ -454,6 +468,40 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
                   )
                 })}
               </div>
+            )}
+          </div>
+
+          {/* Service history (completed work on this equipment) */}
+          <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-medium text-[var(--color-text-primary)]">Service history</span>
+              <div className="flex items-center gap-3">
+                <Link href={`/service-log?new=${e.id}`} className="text-[11px] text-[#185FA5] hover:underline inline-flex items-center gap-1"><i className="ti ti-plus text-[11px]" /> Log service</Link>
+                {history.length > 0 && <Link href={`/service-log?eq=${encodeURIComponent(e.name)}`} className="text-[11px] text-[#185FA5] hover:underline">View all</Link>}
+                {history.length > 0 && <a href={`/reports/service?eq=${e.id}`} target="_blank" rel="noopener noreferrer" className="text-[11px] text-[#185FA5] hover:underline inline-flex items-center gap-1"><i className="ti ti-printer text-[11px]" /> Report</a>}
+              </div>
+            </div>
+            {history.length === 0 ? (
+              <p className="text-[11px] text-[var(--color-text-tertiary)]">No service logged yet for this equipment.</p>
+            ) : (
+              <>
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
+                  {history.map(r => (
+                    <div key={r.id} className="bg-[var(--color-background-secondary)] rounded p-2 text-[11px]">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-[var(--color-text-primary)]">{fmtDate(r.date)}</span>
+                        <span className="text-[var(--color-text-secondary)]">{r.cost == null ? '' : `$${r.cost.toLocaleString('en-US')}`}{r.tech ? ` · ${r.tech}` : ''}</span>
+                      </div>
+                      <div className="text-[var(--color-text-primary)] mt-0.5">{r.work_performed}</div>
+                      {r.parts_used && <div className="text-[10px] text-[var(--color-text-tertiary)]">Parts: {r.parts_used}</div>}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between text-[11px] text-[var(--color-text-secondary)] mt-2 pt-2 border-t border-[var(--color-border-tertiary)]">
+                  <span>{history.length} record{history.length !== 1 ? 's' : ''}</span>
+                  <span>Total: <span className="font-medium text-[var(--color-text-primary)]">${historyTotal.toLocaleString('en-US')}</span></span>
+                </div>
+              </>
             )}
           </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import type { Database } from '@/types/database'
@@ -24,6 +25,19 @@ export default function ServiceLogClient({
   const [showNew, setShowNew] = useState(false)
   const [editing, setEditing] = useState<ServiceLog | null>(null)
   const [eqFilter, setEqFilter] = useState('')
+  const [newPresetEq, setNewPresetEq] = useState('')
+  const searchParams = useSearchParams()
+
+  // Deep-links from the equipment window:
+  //   ?eq=<name>       → pre-filter the list to that equipment
+  //   ?new=<equipmentId> → open a new service entry pre-scoped to that equipment
+  useEffect(() => {
+    const eq = searchParams.get('eq')
+    if (eq) setEqFilter(eq)
+    const nw = searchParams.get('new')
+    if (nw) { setNewPresetEq(nw); setShowNew(true) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const eqNames = Array.from(new Set(entries.map(e => e.equipment_name))).sort((a, b) => a.localeCompare(b))
   const shown = eqFilter ? entries.filter(e => e.equipment_name === eqFilter) : entries
@@ -120,7 +134,8 @@ export default function ServiceLogClient({
           equipment={equipment}
           tasksByEq={tasksByEq}
           entry={editing}
-          onClose={() => { setShowNew(false); setEditing(null) }}
+          presetEquipmentId={editing ? '' : newPresetEq}
+          onClose={() => { setShowNew(false); setEditing(null); setNewPresetEq('') }}
           onSaved={onSaved}
         />
       )}
@@ -129,17 +144,18 @@ export default function ServiceLogClient({
 }
 
 function LogServiceModal({
-  vesselId, equipment, tasksByEq, entry, onClose, onSaved,
+  vesselId, equipment, tasksByEq, entry, presetEquipmentId, onClose, onSaved,
 }: {
   vesselId: string
   equipment: Equipment[]
   tasksByEq: Record<string, Task[]>
   entry: ServiceLog | null
+  presetEquipmentId?: string
   onClose: () => void
   onSaved: (entry: ServiceLog) => void
 }) {
   const today = new Date().toISOString().slice(0, 10)
-  const [equipmentId, setEquipmentId] = useState(entry?.equipment_id ?? '')
+  const [equipmentId, setEquipmentId] = useState(entry?.equipment_id ?? presetEquipmentId ?? '')
   const [otherName, setOtherName]     = useState(entry && !entry.equipment_id ? entry.equipment_name : '')
   const [date, setDate]               = useState(entry?.date ?? today)
   const [work, setWork]               = useState(entry?.work_performed ?? '')
