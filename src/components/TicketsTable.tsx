@@ -55,7 +55,8 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
   async function updateTicket(id: string, patch: Partial<Ticket>) {
     const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('tickets').update(patch).eq('id', id)
+    const { error } = await (supabase as any).from('tickets').update(patch).eq('id', id)
+    if (error) throw error
     setTickets(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t))
     setSelected(prev => prev && prev.id === id ? { ...prev, ...patch } : prev)
   }
@@ -63,7 +64,8 @@ export default function TicketsTable({ tickets: initial, vesselId }: { tickets: 
   async function deleteTicket(id: string) {
     const supabase = createClient()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('tickets').delete().eq('id', id)
+    const { error } = await (supabase as any).from('tickets').delete().eq('id', id)
+    if (error) throw error
     setTickets(prev => prev.filter(t => t.id !== id))
     setSelected(null)
   }
@@ -181,8 +183,11 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
   const [status, setStatus]         = useState<TicketStatus>(t.status)
   const [saving, setSaving]   = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [error, setError]     = useState('')
   // After resolving, optionally log a service record for the linked equipment.
   const [logStep, setLogStep] = useState<{ work: string; date: string } | null>(null)
+
+  const NET_ERR = 'Couldn’t save — check your connection and try again. Your changes are still here.'
   const [attachments, setAttachments] = useState<Attachment[]>(t.ticket_attachments ?? [])
   const [uploading, setUploading] = useState(false)
 
@@ -210,20 +215,22 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
 
   async function save() {
     if (!title.trim()) return
-    setSaving(true)
-    await onSave(t.id, {
-      title: title.trim(),
-      category: category || null,
-      equipment_id: equipmentId || null,
-      reported_by_id: reportedById || null,
-      reported_by: reportedById ? (contacts.find(c => c.id === reportedById)?.name ?? null) : (t.reported_by_id ? null : t.reported_by),
-      priority,
-      assigned_to: assignedTo.trim() || null,
-      description: description.trim() || null,
-      resolution: resolution.trim() || null,
-      status,
-    })
-    setSaving(false)
+    setSaving(true); setError('')
+    try {
+      await onSave(t.id, {
+        title: title.trim(),
+        category: category || null,
+        equipment_id: equipmentId || null,
+        reported_by_id: reportedById || null,
+        reported_by: reportedById ? (contacts.find(c => c.id === reportedById)?.name ?? null) : (t.reported_by_id ? null : t.reported_by),
+        priority,
+        assigned_to: assignedTo.trim() || null,
+        description: description.trim() || null,
+        resolution: resolution.trim() || null,
+        status,
+      })
+    } catch { setError(NET_ERR); return }
+    finally { setSaving(false) }
     // Just resolved a ticket tied to equipment? Offer to log it as service.
     const newlyResolved = status === 'resolved' && t.status !== 'resolved'
     if (newlyResolved && equipmentId) {
@@ -235,17 +242,19 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
 
   async function confirmLog(create: boolean) {
     if (create && logStep) {
-      const eq = equipment.find(e => e.id === equipmentId)
-      const supabase = createClient()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('service_log').insert({
-        vessel_id: t.vessel_id,
-        equipment_id: equipmentId || null,
-        equipment_name: eq?.name ?? 'Equipment',
-        date: logStep.date,
-        work_performed: logStep.work.trim() || title.trim(),
-        tech: assignedTo.trim() || null,
-      })
+      try {
+        const eq = equipment.find(e => e.id === equipmentId)
+        const supabase = createClient()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('service_log').insert({
+          vessel_id: t.vessel_id,
+          equipment_id: equipmentId || null,
+          equipment_name: eq?.name ?? 'Equipment',
+          date: logStep.date,
+          work_performed: logStep.work.trim() || title.trim(),
+          tech: assignedTo.trim() || null,
+        })
+      } catch { setError('Couldn’t log the service record — check your connection and try again.'); return }
     }
     setLogStep(null)
     onClose()
@@ -253,8 +262,10 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
 
   async function remove() {
     if (!confirm('Delete this ticket? This cannot be undone.')) return
-    setDeleting(true)
-    await onDelete(t.id)
+    setDeleting(true); setError('')
+    try {
+      await onDelete(t.id)
+    } catch { setError(NET_ERR); setDeleting(false) }
   }
 
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
@@ -384,6 +395,8 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
             })}
           </div>
         )}
+
+        {error && <p className="text-[12px] text-[#A32D2D] mt-3">{error}</p>}
 
         <div className="flex items-center justify-between gap-2 mt-4">
           <button

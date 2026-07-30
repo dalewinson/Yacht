@@ -239,84 +239,94 @@ function InspectionForm({
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data: any, err: any
-    if (existing) {
-      ;({ data, error: err } = await (supabase as any).from('inspections').update(payload).eq('id', existing.id).select().single())
-    } else {
-      ;({ data, error: err } = await (supabase as any).from('inspections').insert(payload).select().single())
+    try {
+      if (existing) {
+        ;({ data, error: err } = await (supabase as any).from('inspections').update(payload).eq('id', existing.id).select().single())
+      } else {
+        ;({ data, error: err } = await (supabase as any).from('inspections').insert(payload).select().single())
+      }
+    } catch {
+      setError('Couldn’t save — check your connection and tap Save again. Your inspection is still here.')
+      setSaving(false); return
     }
     if (err) { setError(err.message); setSaving(false); return }
 
-    // 1) persist remembered links for this vessel (replace set)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('inspection_links').delete().eq('vessel_id', vesselId)
-    const desired = Object.entries(linkMap)
-      .filter(([, eqId]) => eqId)
-      .map(([k, eqId]) => {
-        const [section_id, item_key] = k.split('|')
-        return { vessel_id: vesselId, section_id, item_key: item_key ?? '', equipment_id: eqId }
-      })
-    if (desired.length) {
+    // The inspection itself is saved. The steps below (links, hours sync, and the
+    // flagged-item ticket review) are best-effort — a network blip here must not
+    // block completion or duplicate the inspection.
+    try {
+      // 1) persist remembered links for this vessel (replace set)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('inspection_links').insert(desired)
-    }
-
-    // 2) sync engine/gen hours -> equipment.current_hours
-    for (const sec of tmpl.filter(s => s.type === 'engine')) {
-      const eqId = getLink(sec.id, '')
-      const hrs = (sections[sec.id] as SectionData)?.hours
-      if (eqId && hrs) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('equipment').update({ current_hours: parseInt(hrs) }).eq('id', eqId)
-      }
-    }
-
-    // 3) stamp last_inspected on every linked equipment
-    const linkedIds = [...new Set(Object.values(linkMap).filter(Boolean))]
-    if (linkedIds.length) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('equipment').update({ last_inspected: date }).in('id', linkedIds)
-    }
-
-    // 4) gather flagged items -> ticket candidates
-    const candidates: Candidate[] = []
-    for (const sec of tmpl) {
-      const secData = sections[sec.id] as SectionData | undefined
-      if (!secData?.items) continue
-      for (const itemName of sec.items) {
-        const d = (secData.items[itemName] ?? {}) as Record<string, unknown>
-        if (!isFlagged(sec.type, d)) continue
-        const eqId = sec.type === 'engine' ? getLink(sec.id, '') : getLink(sec.id, itemName)
-        const eq = equipment.find(e => e.id === eqId) ?? null
-        const ref = `insp:${sec.id}:${itemName}`
-        candidates.push({
-          key: ref,
-          itemName,
-          sectionLabel: sec.label,
-          equipmentId: eq?.id ?? null,
-          category: eq?.category ?? null,
-          comment: String(d.comments ?? ''),
-          ref,
-          alreadyOpen: false,
-          selected: true,
-          title: `${eq?.name ?? sec.label} — ${itemName}`,
-          priority: 'medium',
+      await (supabase as any).from('inspection_links').delete().eq('vessel_id', vesselId)
+      const desired = Object.entries(linkMap)
+        .filter(([, eqId]) => eqId)
+        .map(([k, eqId]) => {
+          const [section_id, item_key] = k.split('|')
+          return { vessel_id: vesselId, section_id, item_key: item_key ?? '', equipment_id: eqId }
         })
+      if (desired.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('inspection_links').insert(desired)
       }
-    }
 
-    if (candidates.length) {
-      // mark ones that already have an open ticket
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: openT } = await (supabase as any)
-        .from('tickets').select('inspection_ref').eq('vessel_id', vesselId).in('status', ['open', 'in_progress'])
-      const openRefs = new Set(((openT ?? []) as { inspection_ref: string | null }[]).map(t => t.inspection_ref).filter(Boolean))
-      for (const c of candidates) {
-        if (openRefs.has(c.ref)) { c.alreadyOpen = true; c.selected = false }
+      // 2) sync engine/gen hours -> equipment.current_hours
+      for (const sec of tmpl.filter(s => s.type === 'engine')) {
+        const eqId = getLink(sec.id, '')
+        const hrs = (sections[sec.id] as SectionData)?.hours
+        if (eqId && hrs) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from('equipment').update({ current_hours: parseInt(hrs) }).eq('id', eqId)
+        }
       }
-      setSaving(false)
-      setReview({ insp: data as Inspection, candidates })
-      return
-    }
+
+      // 3) stamp last_inspected on every linked equipment
+      const linkedIds = [...new Set(Object.values(linkMap).filter(Boolean))]
+      if (linkedIds.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('equipment').update({ last_inspected: date }).in('id', linkedIds)
+      }
+
+      // 4) gather flagged items -> ticket candidates
+      const candidates: Candidate[] = []
+      for (const sec of tmpl) {
+        const secData = sections[sec.id] as SectionData | undefined
+        if (!secData?.items) continue
+        for (const itemName of sec.items) {
+          const d = (secData.items[itemName] ?? {}) as Record<string, unknown>
+          if (!isFlagged(sec.type, d)) continue
+          const eqId = sec.type === 'engine' ? getLink(sec.id, '') : getLink(sec.id, itemName)
+          const eq = equipment.find(e => e.id === eqId) ?? null
+          const ref = `insp:${sec.id}:${itemName}`
+          candidates.push({
+            key: ref,
+            itemName,
+            sectionLabel: sec.label,
+            equipmentId: eq?.id ?? null,
+            category: eq?.category ?? null,
+            comment: String(d.comments ?? ''),
+            ref,
+            alreadyOpen: false,
+            selected: true,
+            title: `${eq?.name ?? sec.label} — ${itemName}`,
+            priority: 'medium',
+          })
+        }
+      }
+
+      if (candidates.length) {
+        // mark ones that already have an open ticket
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: openT } = await (supabase as any)
+          .from('tickets').select('inspection_ref').eq('vessel_id', vesselId).in('status', ['open', 'in_progress'])
+        const openRefs = new Set(((openT ?? []) as { inspection_ref: string | null }[]).map(t => t.inspection_ref).filter(Boolean))
+        for (const c of candidates) {
+          if (openRefs.has(c.ref)) { c.alreadyOpen = true; c.selected = false }
+        }
+        setSaving(false)
+        setReview({ insp: data as Inspection, candidates })
+        return
+      }
+    } catch { /* best-effort side-effects; inspection is already saved */ }
 
     setSaving(false)
     onSaved(data as Inspection)

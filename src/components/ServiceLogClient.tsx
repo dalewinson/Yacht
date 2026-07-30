@@ -188,48 +188,52 @@ function LogServiceModal({
     }
 
     let saved, e1
-    if (entry) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').update(payload).eq('id', entry.id).select().single())
-    } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').insert({ vessel_id: vesselId, ...payload }).select().single())
+    try {
+      if (entry) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').update(payload).eq('id', entry.id).select().single())
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;({ data: saved, error: e1 } = await (supabase as any).from('service_log').insert({ vessel_id: vesselId, ...payload }).select().single())
+      }
+    } catch {
+      setError('Couldn’t save — check your connection and tap Save again. Your entry is still here.')
+      setSaving(false); return
     }
-
     if (e1) { setError(e1.message); setSaving(false); return }
 
-    const hrs = currentHours ? parseInt(currentHours) : selected?.current_hours ?? null
-
-    // Update the equipment's current hours if provided.
-    if (selected && currentHours) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('equipment').update({ current_hours: parseInt(currentHours) }).eq('id', selected.id)
-    }
-
-    // Reset the clock on each task this service completed.
-    for (const t of eqTasks) {
-      if (!completed.has(t.id)) continue
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const patch: any = { last_done_date: date }
-      if (t.interval_type === 'hours' && hrs != null) patch.last_done_hours = hrs
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('service_tasks').update(patch).eq('id', t.id)
-    }
-
-    // If this equipment has open tickets, offer to resolve them (new entries only).
-    if (!entry && selected) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: openT } = await (supabase as any)
-        .from('tickets').select('id,title')
-        .eq('vessel_id', vesselId).eq('equipment_id', selected.id)
-        .in('status', ['open', 'in_progress'])
-      const list = (openT ?? []) as { id: string; title: string }[]
-      if (list.length) {
-        setSaving(false)
-        setResolveStep({ saved: saved as ServiceLog, tickets: list, checked: new Set(list.map(t => t.id)), text: work.trim() })
-        return
+    // Side-effects below are best-effort: the service record is already saved,
+    // so a network blip here must not block completion or duplicate the entry.
+    try {
+      const hrs = currentHours ? parseInt(currentHours) : selected?.current_hours ?? null
+      if (selected && currentHours) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('equipment').update({ current_hours: parseInt(currentHours) }).eq('id', selected.id)
       }
-    }
+      for (const t of eqTasks) {
+        if (!completed.has(t.id)) continue
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const patch: any = { last_done_date: date }
+        if (t.interval_type === 'hours' && hrs != null) patch.last_done_hours = hrs
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('service_tasks').update(patch).eq('id', t.id)
+      }
+
+      // If this equipment has open tickets, offer to resolve them (new entries only).
+      if (!entry && selected) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: openT } = await (supabase as any)
+          .from('tickets').select('id,title')
+          .eq('vessel_id', vesselId).eq('equipment_id', selected.id)
+          .in('status', ['open', 'in_progress'])
+        const list = (openT ?? []) as { id: string; title: string }[]
+        if (list.length) {
+          setSaving(false)
+          setResolveStep({ saved: saved as ServiceLog, tickets: list, checked: new Set(list.map(t => t.id)), text: work.trim() })
+          return
+        }
+      }
+    } catch { /* best-effort side-effects */ }
 
     onSaved(saved as ServiceLog)
   }
@@ -238,12 +242,14 @@ function LogServiceModal({
     if (!resolveStep) return
     if (resolve) {
       setSaving(true)
-      const supabase = createClient()
-      for (const t of resolveStep.tickets) {
-        if (!resolveStep.checked.has(t.id)) continue
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('tickets').update({ status: 'resolved', resolution: resolveStep.text.trim() || null }).eq('id', t.id)
-      }
+      try {
+        const supabase = createClient()
+        for (const t of resolveStep.tickets) {
+          if (!resolveStep.checked.has(t.id)) continue
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from('tickets').update({ status: 'resolved', resolution: resolveStep.text.trim() || null }).eq('id', t.id)
+        }
+      } catch { /* service record is saved; resolving tickets is best-effort */ }
     }
     onSaved(resolveStep.saved)
   }

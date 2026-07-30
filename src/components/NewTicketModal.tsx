@@ -36,30 +36,36 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
     setSaving(true)
     setError('')
 
-    const supabase = createClient()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error: err } = await (supabase as any).from('tickets').insert({
-      vessel_id:   vesselId,
-      title:       title.trim(),
-      description: description.trim() || null,
-      category:    category || null,
-      equipment_id: equipmentId || null,
-      reported_by_id: reportedById || null,
-      reported_by: reportedById ? (contacts.find(c => c.id === reportedById)?.name ?? null) : null,
-      priority,
-      assigned_to: assignedTo.trim() || null,
-      source:      'manual',
-    }).select().single()
+    try {
+      const supabase = createClient()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error: err } = await (supabase as any).from('tickets').insert({
+        vessel_id:   vesselId,
+        title:       title.trim(),
+        description: description.trim() || null,
+        category:    category || null,
+        equipment_id: equipmentId || null,
+        reported_by_id: reportedById || null,
+        reported_by: reportedById ? (contacts.find(c => c.id === reportedById)?.name ?? null) : null,
+        priority,
+        assigned_to: assignedTo.trim() || null,
+        source:      'manual',
+      }).select().single()
 
-    if (err) { setError(err.message); setSaving(false); return }
+      if (err) { setError(err.message); return }
 
-    // Upload any attached photos/videos and link them to the new ticket.
-    const attachments: TicketAttachment[] = []
-    for (const file of files) {
-      const a = await uploadTicketMedia(data.id, file)
-      if (a) attachments.push(a)
+      // Upload any attached photos/videos and link them to the new ticket.
+      const attachments: TicketAttachment[] = []
+      for (const file of files) {
+        const a = await uploadTicketMedia(data.id, file)
+        if (a) attachments.push(a)
+      }
+      onCreated?.({ ...(data as Record<string, unknown>), ticket_attachments: attachments })
+    } catch {
+      setError('Couldn’t save — check your connection and tap Submit again. Your entry is still here.')
+    } finally {
+      setSaving(false)
     }
-    onCreated?.({ ...(data as Record<string, unknown>), ticket_attachments: attachments })
   }
 
   return (
