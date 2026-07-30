@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getVesselContext } from '@/lib/vessel'
 import SettingsClient from '@/components/SettingsClient'
@@ -13,6 +14,9 @@ type Category = Database['public']['Tables']['categories']['Row']
 export default async function SettingsPage() {
   const supabase = await createClient()
   const { activeId, vessels, role } = await getVesselContext()
+
+  // Settings is admin-only; owners/crew are sent to the dashboard.
+  if (role !== 'admin') redirect('/')
 
   let vessel: Vessel | null = null
   if (activeId) {

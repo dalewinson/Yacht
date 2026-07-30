@@ -69,7 +69,7 @@ export default function Sidebar({ vessels, activeId, role = 'admin', onNavigate 
       </nav>
 
       <div className="border-t border-[var(--color-border-tertiary)] pt-1 pb-2">
-        {BOTTOM.map(item => (
+        {BOTTOM.filter(item => role === 'admin' || item.href !== '/settings').map(item => (
           <Link
             key={item.href}
             href={item.href}
