@@ -93,7 +93,9 @@ export default async function DashboardPage() {
                 const svc = eqRoll(e)
                 return (
                 <tr key={e.id} className="hover:bg-[var(--color-background-secondary)]">
-                  <td className="py-2 pr-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">{e.name}</td>
+                  <td className="py-2 pr-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
+                    <Link href={`/equipment?open=${e.id}`} className="text-[#185FA5] hover:underline">{e.name}</Link>
+                  </td>
                   <td className="py-2 pr-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{svc.label}</td>
                   <td className="py-2 border-b border-[var(--color-border-tertiary)]"><ServiceStatusBadge status={svc.status} /></td>
                 </tr>
@@ -120,7 +122,7 @@ export default async function DashboardPage() {
               ) : openTickets.slice(0, 5).map(t => (
                 <tr key={t.id} className="hover:bg-[var(--color-background-secondary)]">
                   <td className="py-2 pr-2 font-medium border-b border-[var(--color-border-tertiary)] overflow-hidden text-ellipsis whitespace-nowrap">
-                    <Link href={`/tickets`} className="text-[#185FA5] hover:underline">{t.title}</Link>
+                    <Link href={`/tickets?open=${t.id}`} className="text-[#185FA5] hover:underline">{t.title}</Link>
                   </td>
                   <td className="py-2 pr-2 border-b border-[var(--color-border-tertiary)]"><PriorityBadge priority={t.priority} /></td>
                   <td className="py-2 border-b border-[var(--color-border-tertiary)]"><StatusBadge status={t.status} /></td>
@@ -146,16 +148,16 @@ export default async function DashboardPage() {
               return n + Object.values(items).filter(it => it && it.ok === false).length
             }, 0)
             return (
-              <div key={insp.id} className="flex items-center justify-between py-2 border-b border-[var(--color-border-tertiary)] last:border-0">
+              <Link key={insp.id} href={`/inspections?open=${insp.id}`} className="flex items-center justify-between py-2 border-b border-[var(--color-border-tertiary)] last:border-0 hover:bg-[var(--color-background-secondary)] -mx-1 px-1 rounded">
                 <div>
-                  <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{insp.month} {insp.year}</div>
+                  <div className="text-[12px] font-medium text-[#185FA5]">{insp.month} {insp.year}</div>
                   <div className="text-[11px] text-[var(--color-text-secondary)]">{insp.vessel_name} · {insp.tech}</div>
                 </div>
                 {flags > 0
                   ? <span className="inline-flex items-center px-[7px] py-[2px] rounded-[var(--border-radius-md)] text-[11px] font-medium bg-[#FAEEDA] text-[#854F0B]">{flags} flag{flags !== 1 ? 's' : ''}</span>
                   : <span className="inline-flex items-center px-[7px] py-[2px] rounded-[var(--border-radius-md)] text-[11px] font-medium bg-[#EAF3DE] text-[#3B6D11]">All clear</span>
                 }
-              </div>
+              </Link>
             )
           })}
         </div>
@@ -166,13 +168,13 @@ export default async function DashboardPage() {
           {lowParts.length === 0 ? (
             <p className="text-[12px] text-[var(--color-text-secondary)]">All parts stocked.</p>
           ) : lowParts.slice(0, 4).map(p => (
-            <div key={p.id} className="flex items-center justify-between py-2 border-b border-[var(--color-border-tertiary)] last:border-0">
+            <Link key={p.id} href={`/parts?open=${p.id}`} className="flex items-center justify-between py-2 border-b border-[var(--color-border-tertiary)] last:border-0 hover:bg-[var(--color-background-secondary)] -mx-1 px-1 rounded">
               <div>
-                <div className="text-[12px] font-medium text-[var(--color-text-primary)]">{p.name}</div>
+                <div className="text-[12px] font-medium text-[#185FA5]">{p.name}</div>
                 <div className="text-[11px] text-[var(--color-text-secondary)]">{p.equipment_name}</div>
               </div>
               <span className="inline-flex items-center px-[7px] py-[2px] rounded-[var(--border-radius-md)] text-[11px] font-medium bg-[#FAEEDA] text-[#854F0B]">{p.qty_on_hand} left</span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

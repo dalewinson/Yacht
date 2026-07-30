@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import { uploadTicketMedia, deleteTicketMedia, ticketMediaUrl, type TicketAttachment } from '@/lib/ticket-media'
@@ -25,6 +26,14 @@ const STATUS_ORDER: Record<string, number> = { open: 0, in_progress: 1, resolved
 export default function TicketsTable({ tickets: initial, vesselId }: { tickets: Ticket[]; vesselId: string | null }) {
   const [tickets, setTickets] = useState(initial)
   const [selected, setSelected] = useState<Ticket | null>(null)
+  const searchParams = useSearchParams()
+
+  // Deep-link support: /tickets?open=<id> opens that ticket (e.g. from the dashboard).
+  useEffect(() => {
+    const id = searchParams.get('open')
+    if (id) { const t = initial.find(x => x.id === id); if (t) setSelected(t) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [statusFilter, setStatusFilter] = useState<TicketStatus | 'all'>('all')
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'created_at', dir: -1 })
 

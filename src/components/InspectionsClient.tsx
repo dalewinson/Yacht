@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import TemplateEditor from './TemplateEditor'
@@ -58,6 +59,14 @@ export default function InspectionsClient({
   const [viewing, setViewing] = useState<Inspection | null>(null)
   const [editTemplate, setEditTemplate] = useState(false)
   const activeVessel = vessels[0] ?? null
+  const searchParams = useSearchParams()
+
+  // Deep-link: /inspections?open=<id> opens that inspection (e.g. from the dashboard).
+  useEffect(() => {
+    const id = searchParams.get('open')
+    if (id) { const insp = initial.find(x => x.id === id); if (insp) setViewing(insp) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleCreated(insp: Inspection) {
     setInspections(prev => [insp, ...prev])

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useEquipmentCategories } from './CategoriesProvider'
 import type { Database } from '@/types/database'
@@ -23,6 +24,14 @@ export default function PartsClient({
   const [lowOnly, setLowOnly]   = useState(false)
   const [editing, setEditing]   = useState<Part | null>(null)
   const [adding, setAdding]     = useState(false)
+  const searchParams = useSearchParams()
+
+  // Deep-link: /parts?open=<id> opens that part (e.g. from the dashboard).
+  useEffect(() => {
+    const id = searchParams.get('open')
+    if (id) { const p = initial.find(x => x.id === id); if (p) setEditing(p) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filtered = parts.filter(p => {
     const q = search.toLowerCase()

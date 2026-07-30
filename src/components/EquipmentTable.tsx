@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
@@ -31,6 +32,14 @@ export default function EquipmentTable({ equipment: initial, tasks: initialTasks
   const [category, setCategory] = useState('')
   const [selected, setSelected] = useState<Equipment | null>(null)
   const [adding, setAdding]     = useState(false)
+  const searchParams = useSearchParams()
+
+  // Deep-link: /equipment?open=<id> opens that item (e.g. from the dashboard).
+  useEffect(() => {
+    const id = searchParams.get('open')
+    if (id) { const e = initial.find(x => x.id === id); if (e) setSelected(e) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const CATEGORIES = useEquipmentCategories()
   const ds = useDueSoon()
   const leadOpts = { leadDays: ds.days, leadHours: ds.hours }
