@@ -19,7 +19,7 @@ export default function AppShell({
 }) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
-  const activeName = vessels.find(v => v.id === activeId)?.name ?? null
+  const active = vessels.find(v => v.id === activeId) ?? null
 
   if (BARE_PATHS.includes(pathname)) {
     return <main className="h-full overflow-y-auto">{children}</main>
@@ -51,10 +51,16 @@ export default function AppShell({
           <span className="text-[14px] font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
             <i className="ti ti-anchor text-[15px] text-[#185FA5]" /> Fairwinds
           </span>
-          {activeName && (
+          {active && (
             <button onClick={() => setOpen(true)} className="ml-auto min-w-0 flex items-center gap-1 px-2 py-1 rounded-[var(--border-radius-md)] bg-[var(--color-background-secondary)] text-[var(--color-text-primary)]" title="Switch boat">
-              <i className="ti ti-ship text-[13px] text-[#185FA5] flex-shrink-0" />
-              <span className="text-[12px] font-medium truncate max-w-[130px]">{activeName}</span>
+              {active.logo_url ? (
+                <img src={active.logo_url} alt={active.name} className="h-5 max-w-[120px] object-contain" />
+              ) : (
+                <>
+                  <i className="ti ti-ship text-[13px] text-[#185FA5] flex-shrink-0" />
+                  <span className="text-[12px] font-medium truncate max-w-[130px]">{active.name}</span>
+                </>
+              )}
             </button>
           )}
         </header>

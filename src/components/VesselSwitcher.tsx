@@ -38,9 +38,13 @@ export default function VesselSwitcher({
       >
         <span className="min-w-0">
           <span className="block text-[10px] text-[var(--color-text-tertiary)] uppercase tracking-wider">Boat</span>
-          <span className="block text-[14px] font-medium text-[var(--color-text-primary)] truncate flex items-center gap-1.5">
-            <i className="ti ti-ship text-[15px]" /> {active?.name ?? 'No boat'}
-          </span>
+          {active?.logo_url ? (
+            <img src={active.logo_url} alt={active.name} className="block h-6 max-w-[150px] object-contain mt-0.5" />
+          ) : (
+            <span className="block text-[14px] font-medium text-[var(--color-text-primary)] truncate flex items-center gap-1.5">
+              <i className="ti ti-ship text-[15px]" /> {active?.name ?? 'No boat'}
+            </span>
+          )}
         </span>
         <i className={`ti ti-chevron-down text-[14px] text-[var(--color-text-secondary)] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -57,7 +61,8 @@ export default function VesselSwitcher({
                   v.id === activeId ? 'text-[#185FA5] font-medium' : 'text-[var(--color-text-primary)]'
                 }`}
               >
-                <i className={`ti ${v.id === activeId ? 'ti-check' : 'ti-ship'} text-[13px]`} />
+                <i className={`ti ${v.id === activeId ? 'ti-check' : 'ti-ship'} text-[13px] flex-shrink-0`} />
+                {v.logo_url && <img src={v.logo_url} alt="" className="h-4 max-w-[70px] object-contain flex-shrink-0" />}
                 <span className="truncate">{v.name}</span>
               </button>
             ))}

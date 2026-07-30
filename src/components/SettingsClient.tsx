@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ACTIVE_VESSEL_COOKIE } from '@/lib/vessel-shared'
+import { uploadVesselLogo } from '@/lib/vessel-logo'
 import type { Database } from '@/types/database'
 
 type Vessel = Database['public']['Tables']['vessels']['Row']
@@ -14,6 +15,8 @@ export default function SettingsClient({ vessel, vesselCount }: { vessel: Vessel
   const [ownerName, setOwnerName] = useState(vessel?.owner_name ?? '')
   const [ownerPhone, setPhone]    = useState(vessel?.owner_phone ?? '')
   const [notes, setNotes]         = useState(vessel?.notes ?? '')
+  const [logoUrl, setLogoUrl]     = useState(vessel?.logo_url ?? '')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
   const [saving, setSaving]       = useState(false)
   const [savedMsg, setSavedMsg]   = useState('')
   const [error, setError]         = useState('')
@@ -43,6 +46,27 @@ export default function SettingsClient({ vessel, vesselCount }: { vessel: Vessel
     }).eq('id', vessel!.id)
     if (err) { setError(err.message); setSaving(false); return }
     setSaving(false); setSavedMsg('Saved.')
+    router.refresh()
+  }
+
+  async function onLogoFile(file: File | undefined) {
+    if (!file || !vessel) return
+    setUploadingLogo(true); setError(''); setSavedMsg('')
+    const url = await uploadVesselLogo(vessel.id, file)
+    if (!url) { setError('Logo upload failed — check your connection and try again.'); setUploadingLogo(false); return }
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('vessels').update({ logo_url: url }).eq('id', vessel.id)
+    setLogoUrl(url); setUploadingLogo(false); setSavedMsg('Logo updated.')
+    router.refresh()
+  }
+
+  async function removeLogo() {
+    if (!vessel) return
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('vessels').update({ logo_url: null }).eq('id', vessel.id)
+    setLogoUrl(''); setSavedMsg('Logo removed.')
     router.refresh()
   }
 
@@ -79,6 +103,24 @@ export default function SettingsClient({ vessel, vesselCount }: { vessel: Vessel
             'Used to route incoming text-message tickets to this boat.')}
         </div>
         {field('Notes', <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className={`${cls} resize-y`} />)}
+
+        {field('Logo',
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-16 flex-shrink-0 rounded-[var(--border-radius-md)] border border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] flex items-center justify-center overflow-hidden">
+              {logoUrl
+                ? <img src={logoUrl} alt="Boat logo" className="w-full h-full object-contain" />
+                : <i className="ti ti-ship text-[22px] text-[var(--color-text-tertiary)]" />}
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-[12px] text-[#185FA5] hover:underline cursor-pointer inline-flex items-center gap-1">
+                <i className="ti ti-upload text-[13px]" /> {uploadingLogo ? 'Uploading…' : logoUrl ? 'Replace' : 'Upload'}
+                <input type="file" accept="image/*" className="hidden" disabled={uploadingLogo}
+                  onChange={e => { onLogoFile(e.target.files?.[0]); e.target.value = '' }} />
+              </label>
+              {logoUrl && <button type="button" onClick={removeLogo} className="text-[12px] text-[#A32D2D] hover:underline">Remove</button>}
+            </div>
+          </div>,
+          'Shown instead of the boat name in the switcher, mobile bar, and report headers. Uploads/removes save immediately.')}
 
         {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
         <div className="flex items-center justify-end gap-3 pt-1">

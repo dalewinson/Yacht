@@ -45,7 +45,9 @@ export default async function ServiceHistoryReport({
           <div>
             <div className="text-[11px] uppercase tracking-widest text-[#185FA5] font-semibold">Fairwinds</div>
             <h1 className="text-[18px] font-bold mt-0.5">Service History</h1>
-            <div className="text-[13px] font-medium mt-0.5">{active?.name ?? ''}</div>
+            {active?.logo_url
+              ? <img src={active.logo_url} alt={active.name} className="h-9 object-contain mt-1" />
+              : <div className="text-[13px] font-medium mt-0.5">{active?.name ?? ''}</div>}
           </div>
           <div className="text-right text-[11px] text-[#57534e]">
             <div><span className="font-semibold">{eqName}</span></div>

@@ -62,6 +62,9 @@ export default async function InspectionReportPage({ params }: { params: Promise
   // Render against the inspection's own frozen template; fall back to the
   // built-in default for older inspections saved before templates existed.
   const template: SectionDef[] = (data.template && data.template.length ? data.template : INSPECTION_SECTIONS)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: v } = await (supabase as any).from('vessels').select('logo_url').eq('id', data.vessel_id).maybeSingle()
+  const logoUrl = (v?.logo_url ?? null) as string | null
 
   // Flagged items summary
   const flagged: { section: string; item: string; note: string }[] = []
@@ -89,7 +92,9 @@ export default async function InspectionReportPage({ params }: { params: Promise
           <div>
             <div className="text-[11px] uppercase tracking-widest text-[#185FA5] font-semibold">Fairwinds</div>
             <h1 className="text-[18px] font-bold mt-0.5">Monthly Maintenance Inspection</h1>
-            <div className="text-[13px] font-medium mt-0.5">{data.vessel_name}</div>
+            {logoUrl
+              ? <img src={logoUrl} alt={data.vessel_name} className="h-9 object-contain mt-1" />
+              : <div className="text-[13px] font-medium mt-0.5">{data.vessel_name}</div>}
           </div>
           <div className="text-right text-[11px] text-[#57534e]">
             <div><span className="font-semibold">{data.month} {data.year}</span></div>

@@ -8,9 +8,9 @@ export interface Database {
   public: {
     Tables: {
       vessels: {
-        Row: { id: string; name: string; owner_name: string; owner_phone: string; notes: string | null; created_at: string }
-        Insert: { id?: string; name: string; owner_name: string; owner_phone: string; notes?: string | null; created_at?: string }
-        Update: { id?: string; name?: string; owner_name?: string; owner_phone?: string; notes?: string | null }
+        Row: { id: string; name: string; owner_name: string; owner_phone: string; notes: string | null; logo_url: string | null; created_at: string }
+        Insert: { id?: string; name: string; owner_name: string; owner_phone: string; notes?: string | null; logo_url?: string | null; created_at?: string }
+        Update: { id?: string; name?: string; owner_name?: string; owner_phone?: string; notes?: string | null; logo_url?: string | null }
       }
       tickets: {
         Row: { id: string; vessel_id: string; title: string; description: string | null; status: TicketStatus; priority: TicketPriority; source: TicketSource; category: string | null; assigned_to: string | null; reported_by: string | null; reported_by_id: string | null; resolution: string | null; equipment_id: string | null; inspection_ref: string | null; created_at: string; updated_at: string }
