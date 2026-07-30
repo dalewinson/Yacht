@@ -68,9 +68,9 @@ export interface Database {
         Update: { name?: string; sort_order?: number }
       }
       app_settings: {
-        Row: { id: number; due_soon_days: number; due_soon_hours: number }
-        Insert: { id?: number; due_soon_days?: number; due_soon_hours?: number }
-        Update: { due_soon_days?: number; due_soon_hours?: number }
+        Row: { id: number; due_soon_days: number; due_soon_hours: number; digest_enabled: boolean; digest_day: number; digest_hour: number; digest_admin_email: string | null; digest_last_sent: string | null }
+        Insert: { id?: number; due_soon_days?: number; due_soon_hours?: number; digest_enabled?: boolean; digest_day?: number; digest_hour?: number; digest_admin_email?: string | null; digest_last_sent?: string | null }
+        Update: { due_soon_days?: number; due_soon_hours?: number; digest_enabled?: boolean; digest_day?: number; digest_hour?: number; digest_admin_email?: string | null; digest_last_sent?: string | null }
       }
       inspections: {
         Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; template: unknown[] | null; created_at: string }
@@ -83,9 +83,9 @@ export interface Database {
         Update: { sections?: unknown[] }
       }
       app_users: {
-        Row: { id: string; name: string; role: 'admin' | 'owner' | 'crew'; passcode_hash: string; active: boolean; created_at: string }
-        Insert: { id?: string; name: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash: string; active?: boolean }
-        Update: { name?: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash?: string; active?: boolean }
+        Row: { id: string; name: string; role: 'admin' | 'owner' | 'crew'; passcode_hash: string; email: string | null; active: boolean; created_at: string }
+        Insert: { id?: string; name: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash: string; email?: string | null; active?: boolean }
+        Update: { name?: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash?: string; email?: string | null; active?: boolean }
       }
       user_vessels: {
         Row: { user_id: string; vessel_id: string }

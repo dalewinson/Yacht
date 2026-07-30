@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { sha256Hex } from '@/lib/auth'
 
 type Role = 'admin' | 'owner' | 'crew'
-export type ManagedUser = { id: string; name: string; role: Role; active: boolean; created_at: string; vesselIds: string[] }
+export type ManagedUser = { id: string; name: string; role: Role; email: string | null; active: boolean; created_at: string; vesselIds: string[] }
 type VesselLite = { id: string; name: string }
 
 const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', owner: 'Owner', crew: 'Crew' }
@@ -85,6 +85,7 @@ function UserModal({ user, vessels, existingUsers, onClose, onSaved }: {
 }) {
   const [name, setName]       = useState(user?.name ?? '')
   const [role, setRole]       = useState<Role>(user?.role ?? 'owner')
+  const [email, setEmail]     = useState(user?.email ?? '')
   const [passcode, setPass]   = useState('')
   const [active, setActive]   = useState(user?.active ?? true)
   const [vesselIds, setVesselIds] = useState<string[]>(user?.vesselIds ?? [])
@@ -114,18 +115,18 @@ function UserModal({ user, vessels, existingUsers, onClose, onSaved }: {
 
     let saved: ManagedUser
     if (user) {
-      const patch: Record<string, unknown> = { name: name.trim(), role, active }
+      const patch: Record<string, unknown> = { name: name.trim(), role, active, email: email.trim() || null }
       if (passcodeHash) patch.passcode_hash = passcodeHash
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: e1 } = await (supabase as any).from('app_users').update(patch).eq('id', user.id)
       if (e1) { setError(e1.message); setSaving(false); return }
-      saved = { ...user, name: name.trim(), role, active }
+      saved = { ...user, name: name.trim(), role, active, email: email.trim() || null }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: e1 } = await (supabase as any).from('app_users')
-        .insert({ name: name.trim(), role, active, passcode_hash: passcodeHash }).select().single()
+        .insert({ name: name.trim(), role, active, email: email.trim() || null, passcode_hash: passcodeHash }).select().single()
       if (e1 || !data) { setError(e1?.message ?? 'Could not save.'); setSaving(false); return }
-      saved = { id: data.id, name: data.name, role: data.role, active: data.active, created_at: data.created_at, vesselIds: [] }
+      saved = { id: data.id, name: data.name, role: data.role, email: data.email, active: data.active, created_at: data.created_at, vesselIds: [] }
     }
 
     // Replace this user's vessel assignments (admins are all-access, so none stored).
@@ -167,6 +168,10 @@ function UserModal({ user, vessels, existingUsers, onClose, onSaved }: {
               <label className={lbl}>Passcode {user && <span className="text-[var(--color-text-tertiary)]">(blank = keep)</span>}</label>
               <input type="text" value={passcode} onChange={e => setPass(e.target.value)} placeholder={user ? '••••••' : 'e.g. patron123'} className={cls} />
             </div>
+          </div>
+          <div>
+            <label className={lbl}>Email <span className="text-[var(--color-text-tertiary)]">(for the weekly digest)</span></label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" className={cls} />
           </div>
 
           {role !== 'admin' && (

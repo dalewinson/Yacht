@@ -5,7 +5,8 @@ import SettingsClient from '@/components/SettingsClient'
 import CategoriesManager from '@/components/CategoriesManager'
 import DueSoonSettings from '@/components/DueSoonSettings'
 import UsersManager, { type ManagedUser } from '@/components/UsersManager'
-import { getDueSoon } from '@/lib/settings'
+import DigestSettings from '@/components/DigestSettings'
+import { getDueSoon, getDigestConfig } from '@/lib/settings'
 import type { Database } from '@/types/database'
 
 type Vessel = Database['public']['Tables']['vessels']['Row']
@@ -28,13 +29,14 @@ export default async function SettingsPage() {
   const { data: catsRaw } = await (supabase as any).from('categories').select('*').order('sort_order')
   const categories = (catsRaw ?? []) as Category[]
   const dueSoon = await getDueSoon()
+  const digest = await getDigestConfig()
 
   // Admin-only: load users + their vessel assignments for the access manager.
   let users: ManagedUser[] = []
   if (role === 'admin') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [{ data: usersRaw }, { data: uvRaw }] = await Promise.all([
-      (supabase as any).from('app_users').select('id, name, role, active, created_at').order('created_at'),
+      (supabase as any).from('app_users').select('id, name, role, email, active, created_at').order('created_at'),
       (supabase as any).from('user_vessels').select('user_id, vessel_id'),
     ])
     const byUser: Record<string, string[]> = {}
@@ -52,6 +54,7 @@ export default async function SettingsPage() {
       <DueSoonSettings days={dueSoon.days} hours={dueSoon.hours} />
       <CategoriesManager categories={categories} />
       {role === 'admin' && <UsersManager users={users} vessels={vessels.map(v => ({ id: v.id, name: v.name }))} />}
+      {role === 'admin' && <DigestSettings enabled={digest.enabled} day={digest.day} hour={digest.hour} adminEmail={digest.adminEmail} />}
     </div>
   )
 }
