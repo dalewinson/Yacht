@@ -11,10 +11,12 @@ const BARE_PATHS = ['/sms']
 export default function AppShell({
   vessels,
   activeId,
+  role = 'admin',
   children,
 }: {
   vessels: VesselLite[]
   activeId: string | null
+  role?: 'admin' | 'owner' | 'crew'
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -29,7 +31,7 @@ export default function AppShell({
     <div className="flex h-full">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex">
-        <Sidebar vessels={vessels} activeId={activeId} />
+        <Sidebar vessels={vessels} activeId={activeId} role={role} />
       </div>
 
       {/* Mobile drawer */}
@@ -37,7 +39,7 @@ export default function AppShell({
         <div className="lg:hidden">
           <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
           <div className="fixed inset-y-0 left-0 z-50">
-            <Sidebar vessels={vessels} activeId={activeId} onNavigate={() => setOpen(false)} />
+            <Sidebar vessels={vessels} activeId={activeId} role={role} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

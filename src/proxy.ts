@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { AUTH_COOKIE, sha256Hex } from '@/lib/auth'
+import { AUTH_COOKIE, USER_COOKIE, sha256Hex } from '@/lib/auth'
 
 // Paths that must stay reachable without the password.
 const PUBLIC = ['/login', '/api/login', '/api/logout', '/api/sms', '/sms']
@@ -14,7 +14,11 @@ export async function proxy(request: NextRequest) {
   if (PUBLIC.some((p) => pathname === p || pathname.startsWith(p + '/'))) return NextResponse.next()
 
   const expected = await sha256Hex(password)
-  if (request.cookies.get(AUTH_COOKIE)?.value === expected) return NextResponse.next()
+  const adminOk = request.cookies.get(AUTH_COOKIE)?.value === expected
+  // Per-person sessions are validated server-side (needs the DB); here we only
+  // require the cookie to be present so the coarse gate lets them through.
+  const userOk = !!request.cookies.get(USER_COOKIE)?.value
+  if (adminOk || userOk) return NextResponse.next()
 
   if (pathname.startsWith('/api/')) return new NextResponse('Unauthorized', { status: 401 })
 

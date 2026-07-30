@@ -16,7 +16,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
       })
-      if (!res.ok) { setError('Incorrect password.'); setLoading(false); return }
+      if (!res.ok) { setError('Incorrect password or passcode.'); setLoading(false); return }
       const next = new URLSearchParams(window.location.search).get('next') || '/'
       window.location.href = next.startsWith('/') ? next : '/'
     } catch {
@@ -32,14 +32,14 @@ export default function LoginPage() {
           <i className="ti ti-anchor text-[18px] text-[#185FA5]" />
           <span className="text-[16px] font-semibold text-[var(--color-text-primary)]">Fairwinds</span>
         </div>
-        <p className="text-[12px] text-[var(--color-text-secondary)] mb-4">Enter the access password to continue.</p>
+        <p className="text-[12px] text-[var(--color-text-secondary)] mb-4">Enter your password or passcode to continue.</p>
 
         <input
           type="password"
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
+          placeholder="Password or passcode"
           className="w-full px-[10px] py-[8px] text-[13px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
         />
         {error && <p className="text-[12px] text-[#A32D2D] mt-2">{error}</p>}

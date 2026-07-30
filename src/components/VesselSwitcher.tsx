@@ -12,9 +12,11 @@ function setActiveVessel(id: string) {
 export default function VesselSwitcher({
   vessels,
   activeId,
+  canAddBoat = true,
 }: {
   vessels: VesselLite[]
   activeId: string | null
+  canAddBoat?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -66,12 +68,14 @@ export default function VesselSwitcher({
                 <span className="truncate">{v.name}</span>
               </button>
             ))}
-            <button
-              onClick={() => { setOpen(false); setAdding(true) }}
-              className="w-full text-left px-3 py-2 text-[12px] flex items-center gap-2 border-t border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)]"
-            >
-              <i className="ti ti-plus text-[13px]" /> Add a boat
-            </button>
+            {canAddBoat && (
+              <button
+                onClick={() => { setOpen(false); setAdding(true) }}
+                className="w-full text-left px-3 py-2 text-[12px] flex items-center gap-2 border-t border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)]"
+              >
+                <i className="ti ti-plus text-[13px]" /> Add a boat
+              </button>
+            )}
           </div>
         </>
       )}

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { vessels, activeId } = await getVesselContext()
+  const { vessels, activeId, role } = await getVesselContext()
 
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="h-full bg-[var(--color-background-tertiary)]">
           <CategoriesProvider value={categories}>
             <SettingsProvider value={dueSoon}>
-              <AppShell vessels={vessels} activeId={activeId}>
+              <AppShell vessels={vessels} activeId={activeId} role={role}>
                 {children}
               </AppShell>
             </SettingsProvider>

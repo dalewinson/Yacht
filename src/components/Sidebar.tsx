@@ -27,7 +27,7 @@ const BOTTOM = [
   { label: 'Settings', href: '/settings', icon: 'ti-settings' },
 ]
 
-export default function Sidebar({ vessels, activeId, onNavigate }: { vessels: VesselLite[]; activeId: string | null; onNavigate?: () => void }) {
+export default function Sidebar({ vessels, activeId, role = 'admin', onNavigate }: { vessels: VesselLite[]; activeId: string | null; role?: 'admin' | 'owner' | 'crew'; onNavigate?: () => void }) {
   const path = usePathname()
 
   function isActive(href: string) {
@@ -41,7 +41,7 @@ export default function Sidebar({ vessels, activeId, onNavigate }: { vessels: Ve
         <div className="text-[13px] font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5 mb-2.5">
           <i className="ti ti-anchor text-[14px] text-[#185FA5]" /> Fairwinds
         </div>
-        <VesselSwitcher vessels={vessels} activeId={activeId} />
+        <VesselSwitcher vessels={vessels} activeId={activeId} canAddBoat={role === 'admin'} />
       </div>
 
       <nav className="flex-1 py-2">

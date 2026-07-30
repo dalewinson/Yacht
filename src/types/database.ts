@@ -82,6 +82,16 @@ export interface Database {
         Insert: { vessel_id: string; sections?: unknown[] }
         Update: { sections?: unknown[] }
       }
+      app_users: {
+        Row: { id: string; name: string; role: 'admin' | 'owner' | 'crew'; passcode_hash: string; active: boolean; created_at: string }
+        Insert: { id?: string; name: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash: string; active?: boolean }
+        Update: { name?: string; role?: 'admin' | 'owner' | 'crew'; passcode_hash?: string; active?: boolean }
+      }
+      user_vessels: {
+        Row: { user_id: string; vessel_id: string }
+        Insert: { user_id: string; vessel_id: string }
+        Update: { user_id?: string; vessel_id?: string }
+      }
       ticket_notes: {
         Row: { id: string; ticket_id: string; body: string; author: string; created_at: string }
         Insert: { id?: string; ticket_id: string; body: string; author?: string }
