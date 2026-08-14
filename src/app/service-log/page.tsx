@@ -11,7 +11,7 @@ export default async function ServiceLogPage() {
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
   const [{ data: logRaw }, { data: equipRaw }, { data: tasksRaw }] = await Promise.all([
-    (supabase as any).from('service_log').select('*').eq('vessel_id', vid).order('date', { ascending: false }),
+    (supabase as any).from('service_log').select('*, service_log_attachments(id, storage_path, content_type, filename)').eq('vessel_id', vid).order('date', { ascending: false }),
     supabase.from('equipment').select('*').eq('vessel_id', vid).order('name'),
     (supabase as any).from('service_tasks').select('*').eq('vessel_id', vid),
   ])

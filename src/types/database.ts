@@ -22,6 +22,11 @@ export interface Database {
         Insert: { id?: string; ticket_id: string; storage_path: string; content_type?: string | null }
         Update: { content_type?: string | null }
       }
+      service_log_attachments: {
+        Row: { id: string; service_log_id: string; storage_path: string; content_type: string | null; filename: string | null; created_at: string }
+        Insert: { id?: string; service_log_id: string; storage_path: string; content_type?: string | null; filename?: string | null }
+        Update: { content_type?: string | null; filename?: string | null }
+      }
       inspection_links: {
         Row: { id: string; vessel_id: string; section_id: string; item_key: string; equipment_id: string | null; created_at: string }
         Insert: { id?: string; vessel_id: string; section_id: string; item_key?: string; equipment_id?: string | null }

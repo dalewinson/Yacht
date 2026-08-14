@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
+import { uploadServiceMedia, deleteServiceMedia, serviceMediaUrl, type ServiceAttachment } from '@/lib/service-media'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
-type ServiceLog = Database['public']['Tables']['service_log']['Row']
+type ServiceLog = Database['public']['Tables']['service_log']['Row'] & { service_log_attachments?: ServiceAttachment[] }
 type Task = Database['public']['Tables']['service_tasks']['Row']
 
 export default function ServiceLogClient({
@@ -111,6 +112,11 @@ export default function ServiceLogClient({
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-primary)]">
                   <span className="sm:hidden block text-[10px] text-[var(--color-text-tertiary)]">{e.equipment_name}</span>
                   {e.work_performed}
+                  {e.service_log_attachments && e.service_log_attachments.length > 0 && (
+                    <a href={serviceMediaUrl(e.service_log_attachments[0].storage_path)} target="_blank" rel="noopener noreferrer" title={`${e.service_log_attachments.length} attachment${e.service_log_attachments.length > 1 ? 's' : ''}`} className="text-[var(--color-text-tertiary)] hover:text-[#185FA5] ml-1 inline-flex items-center">
+                      <i className="ti ti-paperclip text-[12px]" />{e.service_log_attachments.length > 1 && <span className="text-[10px]">{e.service_log_attachments.length}</span>}
+                    </a>
+                  )}
                   {e.parts_used && <span className="block text-[10px] text-[var(--color-text-tertiary)] mt-0.5">Parts: {e.parts_used}</span>}
                 </td>
                 <td className="hidden sm:table-cell px-2 py-2 border-b border-[var(--color-border-tertiary)] text-[var(--color-text-secondary)]">{e.tech ?? '—'}</td>
@@ -168,8 +174,29 @@ function LogServiceModal({
   const [currentHours, setCurrentHours] = useState('')
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
+  // Invoice / file attachments.
+  const [files, setFiles]             = useState<File[]>([])
+  const [attachments, setAttachments] = useState<ServiceAttachment[]>([])
   // After saving, optionally resolve open tickets for the same equipment.
   const [resolveStep, setResolveStep] = useState<{ saved: ServiceLog; tickets: { id: string; title: string }[]; checked: Set<string>; text: string } | null>(null)
+
+  // Load existing attachments when editing.
+  useEffect(() => {
+    if (!entry) return
+    const supabase = createClient()
+    ;(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data } = await (supabase as any).from('service_log_attachments')
+        .select('id, storage_path, content_type, filename').eq('service_log_id', entry.id).order('created_at')
+      setAttachments((data ?? []) as ServiceAttachment[])
+    })()
+  }, [entry])
+
+  async function removeAttachment(a: ServiceAttachment) {
+    if (!confirm('Remove this attachment?')) return
+    await deleteServiceMedia(a)
+    setAttachments(prev => prev.filter(x => x.id !== a.id))
+  }
 
   const selected = equipment.find(e => e.id === equipmentId) ?? null
   const eqTasks = selected ? (tasksByEq[selected.id] ?? []) : []
@@ -218,6 +245,12 @@ function LogServiceModal({
       setSaving(false); return
     }
     if (e1) { setError(e1.message); setSaving(false); return }
+
+    // Upload any newly-attached invoices/files to the saved entry.
+    if (files.length) {
+      try { for (const f of files) await uploadServiceMedia((saved as ServiceLog).id, f) } catch { /* best-effort */ }
+      setFiles([])
+    }
 
     // Side-effects below are best-effort: the service record is already saved,
     // so a network blip here must not block completion or duplicate the entry.
@@ -342,6 +375,28 @@ function LogServiceModal({
 
           {field('Parts used', <input type="text" value={parts} onChange={e => setParts(e.target.value)} placeholder="e.g. 2x oil filter, 8qt oil" className={cls} />)}
           {field('Notes', <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className={`${cls} resize-y`} />)}
+
+          {/* Invoice / attachments */}
+          <div>
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Invoice / attachments</label>
+            {attachments.length > 0 && (
+              <div className="space-y-1 mb-1.5">
+                {attachments.map(a => (
+                  <div key={a.id} className="flex items-center justify-between text-[11px] bg-[var(--color-background-secondary)] rounded-[var(--border-radius-md)] px-2 py-1">
+                    <a href={serviceMediaUrl(a.storage_path)} target="_blank" rel="noopener noreferrer" className="text-[#185FA5] hover:underline truncate inline-flex items-center gap-1 min-w-0">
+                      <i className={`ti ${(a.content_type ?? '').includes('pdf') ? 'ti-file-type-pdf' : 'ti-paperclip'} text-[12px] flex-shrink-0`} />
+                      <span className="truncate">{a.filename ?? 'attachment'}</span>
+                    </a>
+                    <button type="button" onClick={() => removeAttachment(a)} className="text-[var(--color-text-tertiary)] hover:text-[#A32D2D] ml-2 flex-shrink-0" title="Remove"><i className="ti ti-x text-[12px]" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input type="file" accept="image/*,application/pdf" multiple
+              onChange={e => setFiles(Array.from(e.target.files ?? []))}
+              className="block w-full text-[11px] text-[var(--color-text-secondary)] file:mr-2 file:px-2 file:py-1 file:text-[11px] file:border file:border-[var(--color-border-secondary)] file:rounded-[var(--border-radius-md)] file:bg-[var(--color-background-secondary)] file:text-[var(--color-text-primary)]" />
+            {files.length > 0 && <p className="text-[10px] text-[var(--color-text-tertiary)] mt-1">{files.length} file{files.length > 1 ? 's' : ''} to upload on save.</p>}
+          </div>
 
           {selected && eqTasks.length > 0 && (
             <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3 bg-[var(--color-background-secondary)] space-y-2">

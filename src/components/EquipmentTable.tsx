@@ -8,11 +8,12 @@ import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/util
 import ServiceStatusBadge from './ServiceStatusBadge'
 import { useEquipmentCategories } from './CategoriesProvider'
 import { useDueSoon } from './SettingsProvider'
+import { serviceMediaUrl, type ServiceAttachment } from '@/lib/service-media'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
 type Task = Database['public']['Tables']['service_tasks']['Row']
-type ServiceLog = Database['public']['Tables']['service_log']['Row']
+type ServiceLog = Database['public']['Tables']['service_log']['Row'] & { service_log_attachments?: ServiceAttachment[] }
 
 const STARTER_TASKS: { name: string; interval_type: IntervalType; interval_value: number }[] = [
   { name: 'Oil & filter',                 interval_type: 'hours',  interval_value: 150 },
@@ -304,7 +305,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
     const supabase = createClient()
     ;(async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any).from('service_log').select('*').eq('equipment_id', e.id).order('date', { ascending: false })
+      const { data } = await (supabase as any).from('service_log').select('*, service_log_attachments(id, storage_path, content_type, filename)').eq('equipment_id', e.id).order('date', { ascending: false })
       setHistory((data ?? []) as ServiceLog[])
     })()
   }, [e.id])
@@ -492,7 +493,14 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
                         <span className="font-medium text-[var(--color-text-primary)]">{fmtDate(r.date)}</span>
                         <span className="text-[var(--color-text-secondary)]">{r.cost == null ? '' : `$${r.cost.toLocaleString('en-US')}`}{r.tech ? ` · ${r.tech}` : ''}</span>
                       </div>
-                      <div className="text-[var(--color-text-primary)] mt-0.5">{r.work_performed}</div>
+                      <div className="text-[var(--color-text-primary)] mt-0.5">
+                        {r.work_performed}
+                        {r.service_log_attachments && r.service_log_attachments.length > 0 && (
+                          <a href={serviceMediaUrl(r.service_log_attachments[0].storage_path)} target="_blank" rel="noopener noreferrer" title="Invoice / attachment" className="text-[var(--color-text-tertiary)] hover:text-[#185FA5] ml-1 inline-flex items-center">
+                            <i className="ti ti-paperclip text-[11px]" />{r.service_log_attachments.length > 1 && <span className="text-[9px]">{r.service_log_attachments.length}</span>}
+                          </a>
+                        )}
+                      </div>
                       {r.parts_used && <div className="text-[10px] text-[var(--color-text-tertiary)]">Parts: {r.parts_used}</div>}
                     </div>
                   ))}
