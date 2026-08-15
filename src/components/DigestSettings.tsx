@@ -53,6 +53,20 @@ export default function DigestSettings({ enabled: e0, day: d0, hour: h0, adminEm
     setTesting(false)
   }
 
+  async function sendNow() {
+    if (!confirm('Send this week’s digest to everyone now (you + owners/crew with an email)?')) return
+    setTesting(true); setTestMsg('')
+    await persist()
+    try {
+      const res = await fetch('/api/digest/run', { method: 'POST' })
+      const data = await res.json()
+      setTestMsg(data.ok ? `Sent to ${data.sent} of ${data.attempted} recipient(s).` : (data.error || `Sent 0 of ${data.attempted ?? '?'} — check emails on file.`))
+    } catch {
+      setTestMsg('Could not send — try again.')
+    }
+    setTesting(false)
+  }
+
   const cls = "w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
   const lbl = "block text-[11px] text-[var(--color-text-secondary)] mb-[3px]"
 
@@ -100,6 +114,9 @@ export default function DigestSettings({ enabled: e0, day: d0, hour: h0, adminEm
         <div className="flex items-center gap-3">
           <button onClick={sendTest} disabled={testing} className="inline-flex items-center gap-1 px-3 py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)] disabled:opacity-50">
             <i className="ti ti-send text-[13px]" /> {testing ? 'Sending…' : 'Send test'}
+          </button>
+          <button onClick={sendNow} disabled={testing} className="inline-flex items-center gap-1 px-3 py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)] disabled:opacity-50">
+            <i className="ti ti-mail-forward text-[13px]" /> Send to everyone now
           </button>
           {testMsg && <span className="text-[11px] text-[var(--color-text-secondary)]">{testMsg}</span>}
         </div>
