@@ -25,9 +25,10 @@ export async function GET(req: NextRequest) {
   const cfg = await getDigestConfig()
   if (!cfg.enabled) return NextResponse.json({ sent: 0, skipped: 'disabled' })
 
-  const { date, hour, weekday } = pacificNow()
+  const { date, weekday } = pacificNow()
+  // Send on the chosen weekday (once). The daily job fires ~morning Pacific;
+  // the exact hour isn't gated so DST can't silently block it.
   if (weekday !== cfg.day) return NextResponse.json({ sent: 0, skipped: 'not-scheduled-day' })
-  if (hour < cfg.hour) return NextResponse.json({ sent: 0, skipped: 'before-scheduled-hour' })
   if (cfg.lastSent === date) return NextResponse.json({ sent: 0, skipped: 'already-sent' })
 
   const result = await sendWeeklyDigests(cfg.adminEmail)
