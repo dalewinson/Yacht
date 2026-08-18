@@ -105,33 +105,27 @@ export default function InspectionsClient({
       </div>
 
       <div className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-lg)] overflow-x-auto">
-        <table className="w-full sm:min-w-[680px] text-[12px] border-collapse table-fixed">
+        <table className="w-full text-[12px] border-collapse table-fixed">
           <thead>
             <tr>
-              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[45%] sm:w-[22%]">Period</th>
-              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[18%]">Vessel</th>
-              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Tech</th>
-              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Port Eng Hrs</th>
-              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[14%]">Stbd Eng Hrs</th>
-              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[10%]">Date</th>
-              <th className="w-[55%] sm:w-[8%] border-b border-[var(--color-border-tertiary)]"></th>
+              <th className="text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-4 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[40%] sm:w-[34%]">Period</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[22%]">Tech</th>
+              <th className="hidden sm:table-cell text-left font-medium text-[var(--color-text-secondary)] text-[11px] px-2 pb-[7px] pt-3 border-b border-[var(--color-border-tertiary)] w-[18%]">Date</th>
+              <th className="w-[60%] sm:w-[26%] border-b border-[var(--color-border-tertiary)]"></th>
             </tr>
           </thead>
           <tbody>
             {inspections.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-[var(--color-text-secondary)] py-8">No inspections yet. Click &quot;New inspection&quot; to start.</td></tr>
+              <tr><td colSpan={4} className="text-center text-[var(--color-text-secondary)] py-8">No inspections yet. Click &quot;New inspection&quot; to start.</td></tr>
             ) : inspections.map(insp => (
               <tr key={insp.id} className="hover:bg-[var(--color-background-secondary)]">
                 <td className="px-4 py-2 font-medium border-b border-[var(--color-border-tertiary)]">
                   <button onClick={() => setViewing(insp)} className="text-[#185FA5] hover:underline">{insp.month} {insp.year}</button>
                 </td>
-                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{insp.vessel_name}</td>
                 <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{insp.tech ?? '—'}</td>
-                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{insp.port_engine_hrs ?? '—'}</td>
-                <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{insp.stbd_engine_hrs ?? '—'}</td>
                 <td className="hidden sm:table-cell px-2 py-2 text-[var(--color-text-secondary)] border-b border-[var(--color-border-tertiary)]">{fmtDate(insp.date)}</td>
                 <td className="px-2 py-2 border-b border-[var(--color-border-tertiary)]">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-end gap-1.5">
                     <button onClick={() => setViewing(insp)} className="inline-flex items-center gap-1 px-2 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)]">
                       <i className="ti ti-edit text-[12px]" /> Open
                     </button>
