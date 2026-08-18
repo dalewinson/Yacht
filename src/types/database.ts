@@ -78,9 +78,9 @@ export interface Database {
         Update: { due_soon_days?: number; due_soon_hours?: number; digest_enabled?: boolean; digest_day?: number; digest_hour?: number; digest_admin_email?: string | null; digest_last_sent?: string | null }
       }
       inspections: {
-        Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; template: unknown[] | null; created_at: string }
-        Insert: { id?: string; vessel_id: string; vessel_name: string; tech?: string | null; date: string; month: string; year: number; port_engine_hrs?: number | null; stbd_engine_hrs?: number | null; port_gen_hrs?: number | null; sections?: Record<string, unknown>; template?: unknown[] | null }
-        Update: { tech?: string | null; sections?: Record<string, unknown>; template?: unknown[] | null }
+        Row: { id: string; vessel_id: string; vessel_name: string; tech: string | null; date: string; month: string; year: number; port_engine_hrs: number | null; stbd_engine_hrs: number | null; port_gen_hrs: number | null; sections: Record<string, unknown>; template: unknown[] | null; format: string; equipment_answers: Record<string, unknown> | null; snapshot: unknown[] | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; vessel_name: string; tech?: string | null; date: string; month: string; year: number; port_engine_hrs?: number | null; stbd_engine_hrs?: number | null; port_gen_hrs?: number | null; sections?: Record<string, unknown>; template?: unknown[] | null; format?: string; equipment_answers?: Record<string, unknown> | null; snapshot?: unknown[] | null }
+        Update: { tech?: string | null; sections?: Record<string, unknown>; template?: unknown[] | null; format?: string; equipment_answers?: Record<string, unknown> | null; snapshot?: unknown[] | null }
       }
       inspection_templates: {
         Row: { vessel_id: string; sections: unknown[]; updated_at: string }

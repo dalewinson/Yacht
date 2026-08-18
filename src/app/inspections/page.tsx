@@ -8,9 +8,10 @@ export default async function InspectionsPage() {
   const { active, activeId } = await getVesselContext()
   const vid = activeId ?? '00000000-0000-0000-0000-000000000000'
 
-  const [{ data: inspectionsRaw }, { data: equipRaw }, { data: linksRaw }, { data: tmplRow }] = await Promise.all([
+  const [{ data: inspectionsRaw }, { data: equipRaw }, { data: itemsRaw }, { data: linksRaw }, { data: tmplRow }] = await Promise.all([
     (supabase as any).from('inspections').select('*').eq('vessel_id', vid).order('date', { ascending: false }),
-    supabase.from('equipment').select('id, name, category').eq('vessel_id', vid).order('name'),
+    supabase.from('equipment').select('id, name, category, area, current_hours, last_inspected').eq('vessel_id', vid).order('name'),
+    (supabase as any).from('service_tasks').select('id, equipment_id, name, interval_type, interval_value, field_type, last_done_date, last_done_hours, sort_order').eq('vessel_id', vid).order('sort_order'),
     (supabase as any).from('inspection_links').select('section_id, item_key, equipment_id').eq('vessel_id', vid),
     (supabase as any).from('inspection_templates').select('sections').eq('vessel_id', vid).maybeSingle(),
   ])
@@ -30,7 +31,8 @@ export default async function InspectionsPage() {
       <InspectionsClient
         vessels={(vessels ?? []) as { id: string; name: string }[]}
         inspections={(inspectionsRaw ?? []) as any[]}
-        equipment={(equipRaw ?? []) as { id: string; name: string; category: string }[]}
+        equipment={(equipRaw ?? []) as any[]}
+        items={(itemsRaw ?? []) as any[]}
         links={(linksRaw ?? []) as { section_id: string; item_key: string; equipment_id: string | null }[]}
         template={template}
       />

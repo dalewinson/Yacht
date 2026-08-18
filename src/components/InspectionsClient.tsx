@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import TemplateEditor from './TemplateEditor'
+import InspectionV2Form, { type EqLite, type ItemLite, type InspectionRow } from './InspectionV2Form'
 import {
   emptyInspection,
   type SectionDef,
@@ -14,7 +15,8 @@ import {
 import type { TicketPriority } from '@/types/database'
 
 type Vessel = { id: string; name: string }
-type Equipment = { id: string; name: string; category: string }
+type Equipment = EqLite
+type ItemRow = ItemLite & { equipment_id: string }
 type LinkRow = { section_id: string; item_key: string; equipment_id: string | null }
 type Inspection = {
   id: string
@@ -29,6 +31,9 @@ type Inspection = {
   port_gen_hrs: number | null
   sections: InspectionSections
   template?: SectionDef[] | null
+  format?: string
+  equipment_answers?: InspectionRow['equipment_answers']
+  snapshot?: InspectionRow['snapshot']
   created_at: string
 }
 
@@ -45,21 +50,27 @@ export default function InspectionsClient({
   vessels,
   inspections: initial,
   equipment,
+  items,
   links,
   template,
 }: {
   vessels: Vessel[]
   inspections: Inspection[]
   equipment: Equipment[]
+  items: ItemRow[]
   links: LinkRow[]
   template: SectionDef[]
 }) {
+  const router = useRouter()
   const [inspections, setInspections] = useState<Inspection[]>(initial)
   const [showNew, setShowNew] = useState(false)
   const [viewing, setViewing] = useState<Inspection | null>(null)
   const [editTemplate, setEditTemplate] = useState(false)
   const activeVessel = vessels[0] ?? null
   const searchParams = useSearchParams()
+
+  const tasksByEq: Record<string, ItemLite[]> = {}
+  for (const t of items) (tasksByEq[t.equipment_id] ??= []).push(t)
 
   // Deep-link: /inspections?open=<id> opens that inspection (e.g. from the dashboard).
   useEffect(() => {
@@ -68,10 +79,6 @@ export default function InspectionsClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleCreated(insp: Inspection) {
-    setInspections(prev => [insp, ...prev])
-    setShowNew(false)
-  }
   function handleUpdated(insp: Inspection) {
     setInspections(prev => prev.map(i => i.id === insp.id ? insp : i))
     setViewing(null)
@@ -143,10 +150,26 @@ export default function InspectionsClient({
         </table>
       </div>
 
-      {showNew && (
-        <InspectionForm vessels={vessels} equipment={equipment} links={links} template={template} onClose={() => setShowNew(false)} onSaved={handleCreated} />
+      {/* New inspections use the equipment/area model (v2). */}
+      {showNew && activeVessel && (
+        <InspectionV2Form
+          vesselId={activeVessel.id} vesselName={activeVessel.name}
+          equipment={equipment} tasksByEq={tasksByEq}
+          onClose={() => setShowNew(false)}
+          onSaved={() => { setShowNew(false); router.refresh() }}
+        />
       )}
-      {viewing && (
+      {/* Viewing: v2 → new form; older section-based inspections → legacy form. */}
+      {viewing && viewing.format === 'v2' && activeVessel && (
+        <InspectionV2Form
+          vesselId={activeVessel.id} vesselName={activeVessel.name}
+          equipment={equipment} tasksByEq={tasksByEq}
+          existing={viewing as unknown as InspectionRow}
+          onClose={() => setViewing(null)}
+          onSaved={() => { setViewing(null); router.refresh() }}
+        />
+      )}
+      {viewing && viewing.format !== 'v2' && (
         <InspectionForm vessels={vessels} equipment={equipment} links={links} template={template} existing={viewing} onClose={() => setViewing(null)} onSaved={handleUpdated} />
       )}
       {editTemplate && activeVessel && (
@@ -158,7 +181,7 @@ export default function InspectionsClient({
 
 const inputCls = "px-[7px] py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]"
 
-type Candidate = {
+export type Candidate = {
   key: string
   itemName: string
   sectionLabel: string
@@ -572,7 +595,7 @@ function SectionEditor({
   )
 }
 
-function FlaggedReview({
+export function FlaggedReview({
   vesselId, candidates: initial, onDone,
 }: {
   vesselId: string
