@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
-import TemplateEditor from './TemplateEditor'
 import InspectionV2Form, { type EqLite, type ItemLite, type InspectionRow } from './InspectionV2Form'
 import {
   emptyInspection,
@@ -64,7 +63,6 @@ export default function InspectionsClient({
   const [inspections, setInspections] = useState<Inspection[]>(initial)
   const [showNew, setShowNew] = useState(false)
   const [viewing, setViewing] = useState<Inspection | null>(null)
-  const [editTemplate, setEditTemplate] = useState(false)
   const activeVessel = vessels[0] ?? null
   const searchParams = useSearchParams()
 
@@ -94,10 +92,6 @@ export default function InspectionsClient({
   return (
     <>
       <div className="flex justify-end gap-2 mb-3.5">
-        <button onClick={() => setEditTemplate(true)} disabled={!activeVessel}
-          className="inline-flex items-center gap-1.5 px-3 py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] hover:bg-[var(--color-background-secondary)] disabled:opacity-50">
-          <i className="ti ti-adjustments text-[13px]" /> Customize template
-        </button>
         <button onClick={() => setShowNew(true)}
           className="inline-flex items-center gap-1.5 px-3 py-[6px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C]">
           <i className="ti ti-plus text-[13px]" /> New inspection
@@ -164,9 +158,6 @@ export default function InspectionsClient({
       )}
       {viewing && viewing.format !== 'v2' && (
         <InspectionForm vessels={vessels} equipment={equipment} links={links} template={template} existing={viewing} onClose={() => setViewing(null)} onSaved={handleUpdated} />
-      )}
-      {editTemplate && activeVessel && (
-        <TemplateEditor vesselId={activeVessel.id} vesselName={activeVessel.name} initial={template} onClose={() => setEditTemplate(false)} />
       )}
     </>
   )
