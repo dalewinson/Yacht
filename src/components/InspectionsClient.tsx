@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/utils'
 import TemplateEditor from './TemplateEditor'
@@ -61,7 +61,6 @@ export default function InspectionsClient({
   links: LinkRow[]
   template: SectionDef[]
 }) {
-  const router = useRouter()
   const [inspections, setInspections] = useState<Inspection[]>(initial)
   const [showNew, setShowNew] = useState(false)
   const [viewing, setViewing] = useState<Inspection | null>(null)
@@ -156,7 +155,7 @@ export default function InspectionsClient({
           vesselId={activeVessel.id} vesselName={activeVessel.name}
           equipment={equipment} tasksByEq={tasksByEq}
           onClose={() => setShowNew(false)}
-          onSaved={() => { setShowNew(false); router.refresh() }}
+          onSaved={() => window.location.reload()}
         />
       )}
       {/* Viewing: v2 → new form; older section-based inspections → legacy form. */}
@@ -166,7 +165,7 @@ export default function InspectionsClient({
           equipment={equipment} tasksByEq={tasksByEq}
           existing={viewing as unknown as InspectionRow}
           onClose={() => setViewing(null)}
-          onSaved={() => { setViewing(null); router.refresh() }}
+          onSaved={() => window.location.reload()}
         />
       )}
       {viewing && viewing.format !== 'v2' && (
