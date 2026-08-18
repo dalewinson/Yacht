@@ -199,7 +199,9 @@ function LogServiceModal({
   }
 
   const selected = equipment.find(e => e.id === equipmentId) ?? null
-  const eqTasks = selected ? (tasksByEq[selected.id] ?? []) : []
+  // Only scheduled tasks (with an interval) can be "completed"/reset — not
+  // inspection-only check items.
+  const eqTasks = selected ? (tasksByEq[selected.id] ?? []).filter(t => t.interval_type != null && t.interval_value != null) : []
 
   function pickEquipment(id: string) {
     setEquipmentId(id)

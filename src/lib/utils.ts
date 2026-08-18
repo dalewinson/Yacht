@@ -54,12 +54,19 @@ export function computeService(
 }
 
 // ─── Service tasks ───────────────────────────────────────────────────────────
+// An equipment "item" — a scheduled task when it has an interval, or an
+// inspection-only check when interval_type/value are null.
 export interface TaskLike {
   name: string
-  interval_type: IntervalType
-  interval_value: number
+  interval_type: IntervalType | null
+  interval_value: number | null
   last_done_date: string | null
   last_done_hours: number | null
+}
+
+// True when the item is on a maintenance interval (vs an inspection-only check).
+export function isScheduled(t: { interval_type: IntervalType | null; interval_value: number | null }): boolean {
+  return t.interval_type != null && t.interval_value != null
 }
 
 const STATUS_RANK: Record<ServiceStatus, number> = { overdue: 2, due: 1, ok: 0 }
@@ -71,33 +78,37 @@ export function computeTask(
   currentHours: number | null,
   opts?: { leadDays?: number; leadHours?: number },
 ): ServiceInfo {
+  // Inspection-only checks (no interval) aren't scheduled — never "due".
+  if (!isScheduled(task)) return { status: 'ok', label: '—' }
   if (task.interval_type === 'hours') {
     if (currentHours == null) return { status: 'ok', label: 'Set current hours' }
     if (task.last_done_hours == null) return { status: 'ok', label: 'Set baseline hrs' }
-    const remaining = task.interval_value - (currentHours - task.last_done_hours)
+    const remaining = task.interval_value! - (currentHours - task.last_done_hours)
     const lead = opts?.leadHours ?? 15
     const status: ServiceStatus = remaining <= 0 ? 'overdue' : remaining <= lead ? 'due' : 'ok'
     return { status, label: remaining <= 0 ? `Overdue ${Math.abs(remaining)} hrs` : `In ${remaining} hrs` }
   }
   if (!task.last_done_date) return { status: 'ok', label: 'Not set' }
-  const next = addMonths(task.last_done_date, task.interval_value)
+  const next = addMonths(task.last_done_date, task.interval_value!)
   return { status: getServiceStatus(next, opts?.leadDays), label: fmtDate(next) }
 }
 
-// Roll a set of tasks up to a single equipment status (worst task wins).
+// Roll a set of items up to a single equipment status (worst scheduled task
+// wins). Inspection-only checks (no interval) are ignored here.
 export function rollupTasks(tasks: TaskLike[], currentHours: number | null, opts?: { leadDays?: number; leadHours?: number }): ServiceInfo & { taskCount: number } {
-  if (!tasks.length) return { status: 'ok', label: 'No tasks', taskCount: 0 }
+  const scheduled = tasks.filter(isScheduled)
+  if (!scheduled.length) return { status: 'ok', label: 'No tasks', taskCount: 0 }
   let worst: ServiceInfo = { status: 'ok', label: '' }
   let worstName = ''
   let chosen = false
-  for (const t of tasks) {
+  for (const t of scheduled) {
     const info = computeTask(t, currentHours, opts)
     if (!chosen || STATUS_RANK[info.status] > STATUS_RANK[worst.status]) {
       worst = info; worstName = t.name; chosen = true
     }
   }
-  const label = worst.status === 'ok' ? `${tasks.length} task${tasks.length !== 1 ? 's' : ''} · all OK` : `${worstName}: ${worst.label}`
-  return { status: worst.status, label, taskCount: tasks.length }
+  const label = worst.status === 'ok' ? `${scheduled.length} task${scheduled.length !== 1 ? 's' : ''} · all OK` : `${worstName}: ${worst.label}`
+  return { status: worst.status, label, taskCount: scheduled.length }
 }
 
 // Parse a date string for display. A plain 'YYYY-MM-DD' is treated as a LOCAL

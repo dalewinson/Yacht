@@ -2,9 +2,9 @@
 
 import { createContext, useContext } from 'react'
 
-type Cats = { equipment: string[]; contact: string[] }
+type Cats = { equipment: string[]; contact: string[]; area: string[] }
 
-const CategoriesContext = createContext<Cats>({ equipment: [], contact: [] })
+const CategoriesContext = createContext<Cats>({ equipment: [], contact: [], area: [] })
 
 export function CategoriesProvider({ value, children }: { value: Cats; children: React.ReactNode }) {
   return <CategoriesContext.Provider value={value}>{children}</CategoriesContext.Provider>
@@ -15,4 +15,7 @@ export function useEquipmentCategories() {
 }
 export function useContactRoles() {
   return useContext(CategoriesContext).contact
+}
+export function useAreas() {
+  return useContext(CategoriesContext).area
 }

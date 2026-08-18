@@ -43,14 +43,14 @@ export interface Database {
         Update: { full_from?: string | null; opted_in?: boolean; opted_in_at?: string | null }
       }
       service_tasks: {
-        Row: { id: string; equipment_id: string; vessel_id: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date: string | null; last_done_hours: number | null; notes: string | null; created_at: string }
-        Insert: { id?: string; equipment_id: string; vessel_id?: string | null; name: string; interval_type: 'hours' | 'months'; interval_value: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
-        Update: { name?: string; interval_type?: 'hours' | 'months'; interval_value?: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
+        Row: { id: string; equipment_id: string; vessel_id: string | null; name: string; interval_type: 'hours' | 'months' | null; interval_value: number | null; field_type: 'ok' | 'text' | 'number'; sort_order: number; last_done_date: string | null; last_done_hours: number | null; notes: string | null; created_at: string }
+        Insert: { id?: string; equipment_id: string; vessel_id?: string | null; name: string; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; field_type?: 'ok' | 'text' | 'number'; sort_order?: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
+        Update: { name?: string; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; field_type?: 'ok' | 'text' | 'number'; sort_order?: number; last_done_date?: string | null; last_done_hours?: number | null; notes?: string | null }
       }
       equipment: {
-        Row: { id: string; vessel_id: string; name: string; category: string; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; last_inspected: string | null; assigned_tech: string | null; notes: string | null; created_at: string }
-        Insert: { id?: string; vessel_id: string; name: string; category: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
-        Update: { name?: string; category?: string; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
+        Row: { id: string; vessel_id: string; name: string; category: string; area: string | null; model: string | null; serial: string | null; last_service: string | null; next_due: string | null; interval: ServiceInterval; interval_type: 'hours' | 'months' | null; interval_value: number | null; current_hours: number | null; last_service_hours: number | null; last_inspected: string | null; assigned_tech: string | null; notes: string | null; created_at: string }
+        Insert: { id?: string; vessel_id: string; name: string; category: string; area?: string | null; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
+        Update: { name?: string; category?: string; area?: string | null; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
       }
       service_log: {
         Row: { id: string; vessel_id: string; equipment_id: string | null; equipment_name: string; date: string; work_performed: string; tech: string | null; cost: number | null; parts_used: string | null; notes: string | null; created_at: string }
@@ -68,8 +68,8 @@ export interface Database {
         Update: { name?: string; role?: string; phone?: string | null; email?: string | null; specialty?: string | null; notes?: string | null }
       }
       categories: {
-        Row: { id: string; kind: 'equipment' | 'contact'; name: string; sort_order: number; created_at: string }
-        Insert: { id?: string; kind: 'equipment' | 'contact'; name: string; sort_order?: number }
+        Row: { id: string; kind: 'equipment' | 'contact' | 'area'; name: string; sort_order: number; created_at: string }
+        Insert: { id?: string; kind: 'equipment' | 'contact' | 'area'; name: string; sort_order?: number }
         Update: { name?: string; sort_order?: number }
       }
       app_settings: {

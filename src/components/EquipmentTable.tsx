@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { rollupTasks, computeTask, fmtDate, type IntervalType } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
-import { useEquipmentCategories } from './CategoriesProvider'
+import { useEquipmentCategories, useAreas } from './CategoriesProvider'
 import { useDueSoon } from './SettingsProvider'
 import { serviceMediaUrl, type ServiceAttachment } from '@/lib/service-media'
 import type { Database } from '@/types/database'
@@ -151,8 +151,10 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
   onAdded: (created: Equipment, tasks: Task[]) => void
 }) {
   const CATEGORIES = useEquipmentCategories()
+  const AREAS = useAreas()
   const [name, setName]         = useState('')
   const [category, setCategory] = useState(CATEGORIES[0] ?? 'Propulsion')
+  const [area, setArea]         = useState('')
   const [model, setModel]       = useState('')
   const [serial, setSerial]     = useState('')
   const [notes, setNotes]       = useState('')
@@ -180,7 +182,7 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error: err } = await (supabase as any).from('equipment').insert({
       vessel_id: vesselId,
-      name: name.trim(), category,
+      name: name.trim(), category, area: area || null,
       model: model.trim() || null, serial: serial.trim() || null,
       current_hours: currentHours, notes: notes.trim() || null,
     }).select().single()
@@ -222,6 +224,12 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
             {field('Name *', <input type="text" value={name} onChange={e => setName(e.target.value)} className={cls} />)}
             {field('Category',
               <select value={category} onChange={e => setCategory(e.target.value)} className={cls}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+            )}
+            {field('Area',
+              <select value={area} onChange={e => setArea(e.target.value)} className={cls}>
+                <option value="">— Unassigned —</option>
+                {AREAS.map(a => <option key={a}>{a}</option>)}
+              </select>
             )}
             {field('Make / model', <input type="text" value={model} onChange={e => setModel(e.target.value)} className={cls} />)}
             {field('Serial #', <input type="text" value={serial} onChange={e => setSerial(e.target.value)} className={cls} />)}
@@ -267,11 +275,14 @@ function AddEquipmentModal({ vesselId, onClose, onAdded }: {
   )
 }
 
+type FieldType = 'ok' | 'text' | 'number'
 type TaskRow = {
   id?: string
   name: string
+  scheduled: boolean            // has a maintenance interval (vs inspection-only check)
   interval_type: IntervalType
   interval_value: string
+  field_type: FieldType
   last_done_date: string
   last_done_hours: string
 }
@@ -284,17 +295,25 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   onDeleted: (id: string) => void
 }) {
   const CATEGORIES = useEquipmentCategories()
+  const AREAS = useAreas()
   const [name, setName]               = useState(e.name)
   const [category, setCategory]       = useState(e.category)
+  const [area, setArea]               = useState(e.area ?? '')
   const [model, setModel]             = useState(e.model ?? '')
   const [serial, setSerial]           = useState(e.serial ?? '')
   const [assignedTech, setAssignedTech] = useState(e.assigned_tech ?? '')
   const [currentHours, setCurrentHours] = useState(e.current_hours?.toString() ?? '')
   const [notes, setNotes]             = useState(e.notes ?? '')
-  const [tasks, setTasks]             = useState<TaskRow[]>(initialTasks.map(t => ({
-    id: t.id, name: t.name, interval_type: t.interval_type, interval_value: t.interval_value.toString(),
-    last_done_date: t.last_done_date ?? '', last_done_hours: t.last_done_hours?.toString() ?? '',
-  })))
+  const [tasks, setTasks]             = useState<TaskRow[]>(
+    [...initialTasks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map(t => ({
+      id: t.id, name: t.name,
+      scheduled: t.interval_type != null && t.interval_value != null,
+      interval_type: (t.interval_type ?? 'hours') as IntervalType,
+      interval_value: t.interval_value?.toString() ?? '',
+      field_type: (t.field_type ?? 'ok') as FieldType,
+      last_done_date: t.last_done_date ?? '', last_done_hours: t.last_done_hours?.toString() ?? '',
+    })),
+  )
   const [deletedIds, setDeletedIds]   = useState<string[]>([])
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
@@ -313,13 +332,14 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
 
   const ds = useDueSoon()
   const curHrs = currentHours ? parseInt(currentHours) : null
-  const hasHoursTask = tasks.some(t => t.interval_type === 'hours')
+  const hasHoursTask = tasks.some(t => t.scheduled && t.interval_type === 'hours')
 
   function patchTask(i: number, p: Partial<TaskRow>) {
     setTasks(prev => prev.map((t, idx) => idx === i ? { ...t, ...p } : t))
   }
   function addTask() {
-    setTasks(prev => [...prev, { name: '', interval_type: 'hours', interval_value: '', last_done_date: '', last_done_hours: '' }])
+    // New items default to an inspection-only check (the common case).
+    setTasks(prev => [...prev, { name: '', scheduled: false, interval_type: 'hours', interval_value: '', field_type: 'ok', last_done_date: '', last_done_hours: '' }])
   }
   function removeTask(i: number) {
     setTasks(prev => {
@@ -330,8 +350,8 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
   }
   function addStarterTasks() {
     setTasks(prev => [...prev, ...STARTER_TASKS.map(s => ({
-      name: s.name, interval_type: s.interval_type, interval_value: s.interval_value.toString(),
-      last_done_date: '', last_done_hours: '',
+      name: s.name, scheduled: true, interval_type: s.interval_type, interval_value: s.interval_value.toString(),
+      field_type: 'ok' as FieldType, last_done_date: '', last_done_hours: '',
     }))])
   }
 
@@ -343,7 +363,7 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
     // 1) equipment fields
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: eqData, error: eqErr } = await (supabase as any).from('equipment').update({
-      name, category, model: model || null, serial: serial || null,
+      name, category, area: area || null, model: model || null, serial: serial || null,
       current_hours: currentHours ? parseInt(currentHours) : null,
       assigned_tech: assignedTech || null, notes: notes || null,
     }).eq('id', e.id).select().single()
@@ -355,14 +375,18 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
       await (supabase as any).from('service_tasks').delete().in('id', deletedIds)
     }
 
-    // 3) upsert tasks (skip blank rows)
+    // 3) upsert items (skip blank; scheduled items need an interval value)
     const finalTasks: Task[] = []
+    let order = 0
     for (const t of tasks) {
-      if (!t.name.trim() || !t.interval_value) continue
+      if (!t.name.trim()) continue
+      if (t.scheduled && !t.interval_value) continue
       const payload = {
         name: t.name.trim(),
-        interval_type: t.interval_type,
-        interval_value: parseInt(t.interval_value),
+        interval_type: t.scheduled ? t.interval_type : null,
+        interval_value: t.scheduled ? parseInt(t.interval_value) : null,
+        field_type: t.field_type,
+        sort_order: order++,
         last_done_date: t.last_done_date || null,
         last_done_hours: t.last_done_hours ? parseInt(t.last_done_hours) : null,
       }
@@ -409,6 +433,12 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
             {field('Category',
               <select value={category} onChange={ev => setCategory(ev.target.value)} className={cls}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
             )}
+            {field('Area',
+              <select value={area} onChange={ev => setArea(ev.target.value)} className={cls}>
+                <option value="">— Unassigned —</option>
+                {AREAS.map(a => <option key={a}>{a}</option>)}
+              </select>
+            )}
             {field('Make / model', <input type="text" value={model} onChange={ev => setModel(ev.target.value)} className={cls} />)}
             {field('Serial #', <input type="text" value={serial} onChange={ev => setSerial(ev.target.value)} className={cls} />)}
             {hasHoursTask && field('Current hours', <input type="number" min="0" value={currentHours} onChange={ev => setCurrentHours(ev.target.value)} placeholder="e.g. 2480" className={cls} />)}
@@ -416,55 +446,67 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
             {field('Assigned tech', <input type="text" value={assignedTech} onChange={ev => setAssignedTech(ev.target.value)} className={cls} />)}
           </div>
 
-          {/* Service tasks */}
+          {/* Items — inspection checks + scheduled maintenance */}
           <div className="border border-[var(--color-border-tertiary)] rounded-[var(--border-radius-md)] p-3 bg-[var(--color-background-secondary)]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-medium text-[var(--color-text-primary)]">Service tasks</span>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-medium text-[var(--color-text-primary)]">Items</span>
               <div className="flex gap-2">
                 {isEngineish && <button type="button" onClick={addStarterTasks} className="text-[11px] text-[#185FA5] hover:underline">+ Common engine tasks</button>}
-                <button type="button" onClick={addTask} className="text-[11px] text-[#185FA5] hover:underline">+ Add task</button>
+                <button type="button" onClick={addTask} className="text-[11px] text-[#185FA5] hover:underline">+ Add item</button>
               </div>
             </div>
+            <p className="text-[10px] text-[var(--color-text-tertiary)] mb-2">Things you check on this equipment. Tick “Scheduled” to also track it on a maintenance interval.</p>
 
             {tasks.length === 0 ? (
-              <p className="text-[11px] text-[var(--color-text-tertiary)]">No tasks yet. Add one, or use “Common engine tasks”.</p>
+              <p className="text-[11px] text-[var(--color-text-tertiary)]">No items yet. Add one, or use “Common engine tasks”.</p>
             ) : (
               <div className="space-y-1.5">
                 {tasks.map((t, i) => {
-                  const preview = t.name && t.interval_value ? computeTask({
+                  const preview = t.scheduled && t.name && t.interval_value ? computeTask({
                     name: t.name, interval_type: t.interval_type, interval_value: parseInt(t.interval_value) || 0,
                     last_done_date: t.last_done_date || null, last_done_hours: t.last_done_hours ? parseInt(t.last_done_hours) : null,
                   }, curHrs, { leadDays: ds.days, leadHours: ds.hours }) : null
                   return (
                     <div key={i} className="bg-[var(--color-background-primary)] border border-[var(--color-border-tertiary)] rounded p-2">
                       <div className="flex items-center gap-1.5">
-                        <input type="text" value={t.name} onChange={ev => patchTask(i, { name: ev.target.value })} placeholder="Task name"
+                        <input type="text" value={t.name} onChange={ev => patchTask(i, { name: ev.target.value })} placeholder="Item name (e.g. Oil level, Impeller)"
                           className="flex-1 min-w-0 px-1.5 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
-                        <span className="text-[10px] text-[var(--color-text-tertiary)]">every</span>
-                        <input type="number" min="1" value={t.interval_value} onChange={ev => patchTask(i, { interval_value: ev.target.value })}
-                          className="w-[56px] px-1.5 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
-                        <select value={t.interval_type} onChange={ev => patchTask(i, { interval_type: ev.target.value as IntervalType })}
+                        <select value={t.field_type} onChange={ev => patchTask(i, { field_type: ev.target.value as FieldType })} title="How it's checked"
                           className="px-1 py-1 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
-                          <option value="hours">hrs</option>
-                          <option value="months">mo</option>
+                          <option value="ok">OK</option>
+                          <option value="text">Reading</option>
+                          <option value="number">Number</option>
                         </select>
+                        <label className="text-[10px] text-[var(--color-text-secondary)] inline-flex items-center gap-1 whitespace-nowrap">
+                          <input type="checkbox" checked={t.scheduled} onChange={ev => patchTask(i, { scheduled: ev.target.checked })} /> Sched.
+                        </label>
                         <button type="button" onClick={() => removeTask(i)} className="text-[var(--color-text-tertiary)] hover:text-[#A32D2D] px-1" title="Remove">
                           <i className="ti ti-x text-[13px]" />
                         </button>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px] text-[var(--color-text-tertiary)]">Last done:</span>
-                        {t.interval_type === 'hours' ? (
-                          <input type="number" min="0" value={t.last_done_hours} onChange={ev => patchTask(i, { last_done_hours: ev.target.value })} placeholder="hrs at last service"
-                            className="w-[120px] px-1.5 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
-                        ) : (
-                          <input type="date" value={t.last_done_date} onChange={ev => patchTask(i, { last_done_date: ev.target.value })}
-                            className="px-1.5 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
-                        )}
-                        {preview && (
-                          <span className="ml-auto"><ServiceStatusBadge status={preview.status} /> <span className="text-[10px] text-[var(--color-text-secondary)]">{preview.label}</span></span>
-                        )}
-                      </div>
+                      {t.scheduled && (
+                        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                          <span className="text-[10px] text-[var(--color-text-tertiary)]">every</span>
+                          <input type="number" min="1" value={t.interval_value} onChange={ev => patchTask(i, { interval_value: ev.target.value })}
+                            className="w-[52px] px-1.5 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
+                          <select value={t.interval_type} onChange={ev => patchTask(i, { interval_type: ev.target.value as IntervalType })}
+                            className="px-1 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
+                            <option value="hours">hrs</option>
+                            <option value="months">mo</option>
+                          </select>
+                          <span className="text-[10px] text-[var(--color-text-tertiary)] ml-1">last done</span>
+                          {t.interval_type === 'hours' ? (
+                            <input type="number" min="0" value={t.last_done_hours} onChange={ev => patchTask(i, { last_done_hours: ev.target.value })} placeholder="hrs"
+                              className="w-[80px] px-1.5 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
+                          ) : (
+                            <input type="date" value={t.last_done_date} onChange={ev => patchTask(i, { last_done_date: ev.target.value })}
+                              className="px-1.5 py-0.5 text-[11px] border border-[var(--color-border-secondary)] rounded bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
+                          )}
+                          {preview && (
+                            <span className="ml-auto"><ServiceStatusBadge status={preview.status} /> <span className="text-[10px] text-[var(--color-text-secondary)]">{preview.label}</span></span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

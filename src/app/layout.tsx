@@ -21,10 +21,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const supabase = await createClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: catsRaw } = await (supabase as any).from('categories').select('kind, name').order('sort_order')
-  const cats = (catsRaw ?? []) as { kind: 'equipment' | 'contact'; name: string }[]
+  const cats = (catsRaw ?? []) as { kind: 'equipment' | 'contact' | 'area'; name: string }[]
   const categories = {
     equipment: cats.filter(c => c.kind === 'equipment').map(c => c.name),
     contact: cats.filter(c => c.kind === 'contact').map(c => c.name),
+    area: cats.filter(c => c.kind === 'area').map(c => c.name),
   }
   const dueSoon = await getDueSoon()
 

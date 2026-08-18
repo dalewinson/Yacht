@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/types/database'
 
 type Category = Database['public']['Tables']['categories']['Row']
-type Kind = 'equipment' | 'contact'
+type Kind = 'equipment' | 'contact' | 'area'
 
 export default function CategoriesManager({ categories }: { categories: Category[] }) {
   return (
@@ -22,6 +22,12 @@ export default function CategoriesManager({ categories }: { categories: Category
         title="Contact roles"
         hint="Used for the Contacts list."
         items={categories.filter(c => c.kind === 'contact')}
+      />
+      <CategoryList
+        kind="area"
+        title="Areas"
+        hint="Physical locations (Engine Room, Flybridge…) for grouping equipment during inspections."
+        items={categories.filter(c => c.kind === 'area')}
       />
     </div>
   )
@@ -62,6 +68,9 @@ function CategoryList({ kind, title, hint, items }: { kind: Kind; title: string;
     if (kind === 'equipment') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('equipment').update({ category: name }).eq('category', row.name)
+    } else if (kind === 'area') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('equipment').update({ area: name }).eq('area', row.name)
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any).from('crew').update({ role: name }).eq('role', row.name)
