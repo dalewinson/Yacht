@@ -90,7 +90,12 @@ export function computeTask(
   }
   if (!task.last_done_date) return { status: 'ok', label: 'Not set' }
   const next = addMonths(task.last_done_date, task.interval_value!)
-  return { status: getServiceStatus(next, opts?.leadDays), label: fmtDate(next) }
+  // Cap the "due soon" lead to ~1/3 of the interval so short-interval tasks
+  // (e.g. a monthly item) aren't perpetually "due" under a long global window —
+  // while long-interval tasks still get the full configured heads-up.
+  const intervalDays = task.interval_value! * 30
+  const lead = Math.min(opts?.leadDays ?? 14, Math.max(3, Math.round(intervalDays / 3)))
+  return { status: getServiceStatus(next, lead), label: fmtDate(next) }
 }
 
 // Roll a set of items up to a single equipment status (worst scheduled task
