@@ -11,8 +11,21 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 
 export type EqLite = { id: string; name: string; category: string; area: string | null; current_hours: number | null; last_inspected: string | null }
 export type ItemLite = { id: string; name: string; interval_type: 'hours' | 'months' | null; interval_value: number | null; field_type: 'ok' | 'text' | 'number'; last_done_date: string | null; last_done_hours: number | null }
-type Answer = { ok: boolean; value: string; notes: string; done: boolean }
+// Each item is inspected in three states: 'unset' (blank, not yet inspected),
+// 'ok' (checked / passed), or 'issue' (flagged → ticket candidate on save).
+type ItemStatus = 'unset' | 'ok' | 'issue'
+type Answer = { status: ItemStatus; value: string; notes: string; done: boolean }
 type EqAnswers = { hours: string; items: Record<string, Answer> }
+
+// Normalize a stored/draft answer, mapping the legacy boolean `ok` shape
+// (checked = ok, unchecked = issue) onto the three-state model.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normAnswer(a: any): Answer {
+  const status: ItemStatus = typeof a?.status === 'string' ? a.status
+    : a?.ok === false ? 'issue' : a?.ok === true ? 'ok' : 'unset'
+  return { status, value: a?.value ?? '', notes: a?.notes ?? '', done: !!a?.done }
+}
+const BLANK: Answer = { status: 'unset', value: '', notes: '', done: false }
 
 // An unsaved in-progress inspection, persisted to localStorage so a mobile
 // browser discarding the backgrounded tab doesn't lose entered data.
@@ -83,6 +96,7 @@ export default function InspectionV2Form({
   const [openAreas, setOpenAreas] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [blankWarn, setBlankWarn] = useState(0)
   const [review, setReview] = useState<{ candidates: Candidate[] } | null>(null)
 
   // answers[eqId] = { hours, items: { itemId: answer } }
@@ -93,7 +107,7 @@ export default function InspectionV2Form({
       const items: Record<string, Answer> = {}
       for (const it of eq.items) {
         const pa = prior?.items?.[it.id]
-        items[it.id] = pa ?? { ok: true, value: '', notes: '', done: false }
+        items[it.id] = pa ? normAnswer(pa) : { ...BLANK }
       }
       out[eq.id] = { hours: prior?.hours ?? (eqCurHours[eq.id]?.toString() ?? ''), items }
     }
@@ -115,7 +129,7 @@ export default function InspectionV2Form({
       for (const area of fresh) for (const eq of area.equipment) {
         const priorEq = prev[eq.id]
         const items: Record<string, Answer> = {}
-        for (const it of eq.items) items[it.id] = priorEq?.items?.[it.id] ?? { ok: true, value: '', notes: '', done: false }
+        for (const it of eq.items) items[it.id] = priorEq?.items?.[it.id] ?? { ...BLANK }
         out[eq.id] = { hours: priorEq?.hours ?? (eqCurHours[eq.id]?.toString() ?? ''), items }
       }
       return out
@@ -144,7 +158,13 @@ export default function InspectionV2Form({
   }
   function restoreDraft() {
     if (!pendingDraft) return
-    setAnswers(pendingDraft.answers)
+    const norm: Record<string, EqAnswers> = {}
+    for (const [eqId, ea] of Object.entries(pendingDraft.answers)) {
+      const items: Record<string, Answer> = {}
+      for (const [itId, a] of Object.entries(ea.items ?? {})) items[itId] = normAnswer(a)
+      norm[eqId] = { hours: ea.hours ?? '', items }
+    }
+    setAnswers(norm)
     setGroups(pendingDraft.groups)
     setTech(pendingDraft.tech); setMonth(pendingDraft.month); setYear(pendingDraft.year); setDate(pendingDraft.date)
     setPendingDraft(null)
@@ -155,11 +175,24 @@ export default function InspectionV2Form({
   }
   function areaFlags(area: SnapArea) {
     let n = 0
-    for (const eq of area.equipment) for (const it of eq.items) if (answers[eq.id]?.items[it.id]?.ok === false) n++
+    for (const eq of area.equipment) for (const it of eq.items) if (answers[eq.id]?.items[it.id]?.status === 'issue') n++
+    return n
+  }
+  function countUnset() {
+    let n = 0
+    for (const area of groups) for (const eq of area.equipment) for (const it of eq.items) {
+      if ((answers[eq.id]?.items[it.id]?.status ?? 'unset') === 'unset') n++
+    }
     return n
   }
 
-  async function save() {
+  async function save(force = false) {
+    // Warn (once) if any items are still blank / not inspected.
+    if (!force) {
+      const blanks = countUnset()
+      if (blanks > 0) { setBlankWarn(blanks); return }
+    }
+    setBlankWarn(0)
     setSaving(true); setError('')
     const supabase = createClient()
 
@@ -212,7 +245,7 @@ export default function InspectionV2Form({
               await (supabase as any).from('service_tasks').update(patch).eq('id', it.id)
             }
             // flagged → ticket candidate
-            if (ans.ok === false) {
+            if (ans.status === 'issue') {
               const ref = `insp:${eq.id}:${it.id}`
               candidates.push({
                 key: ref, itemName: it.name, sectionLabel: `${area.area} · ${eq.name}`,
@@ -313,15 +346,26 @@ export default function InspectionV2Form({
                         ) : (
                           <div className="space-y-1">
                             {eq.items.map(it => {
-                              const ans = answers[eq.id]?.items[it.id] ?? { ok: true, value: '', notes: '', done: false }
+                              const ans = answers[eq.id]?.items[it.id] ?? BLANK
                               const due = it.scheduled ? computeTask({ name: it.name, interval_type: it.interval_type, interval_value: it.interval_value, last_done_date: it.last_done_date, last_done_hours: it.last_done_hours }, answers[eq.id]?.hours ? parseInt(answers[eq.id].hours) : eqCurHours[eq.id], { leadDays: ds.days, leadHours: ds.hours }) : null
                               return (
-                                <div key={it.id} className={`rounded p-1.5 ${ans.ok === false ? 'bg-red-50' : ''}`}>
+                                <div key={it.id} className={`rounded p-1.5 ${ans.status === 'issue' ? 'bg-red-50' : ''}`}>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <label className="inline-flex items-center gap-1.5 text-[12px] text-[var(--color-text-primary)] cursor-pointer min-w-[150px]">
-                                      <input type="checkbox" checked={ans.ok} onChange={e => setItem(eq.id, it.id, { ok: e.target.checked })} />
-                                      {it.name}
-                                    </label>
+                                    <div className="inline-flex items-center gap-2 min-w-[150px]">
+                                      <div className="inline-flex rounded-[var(--border-radius-md)] border border-[var(--color-border-secondary)] overflow-hidden shrink-0">
+                                        <button type="button" title="OK" aria-pressed={ans.status === 'ok'}
+                                          onClick={() => setItem(eq.id, it.id, { status: ans.status === 'ok' ? 'unset' : 'ok' })}
+                                          className={`px-2 py-[3px] ${ans.status === 'ok' ? 'bg-[#2F6A2E] text-white' : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-background-secondary)]'}`}>
+                                          <i className="ti ti-check text-[13px] block" />
+                                        </button>
+                                        <button type="button" title="Flag issue" aria-pressed={ans.status === 'issue'}
+                                          onClick={() => setItem(eq.id, it.id, { status: ans.status === 'issue' ? 'unset' : 'issue' })}
+                                          className={`px-2 py-[3px] border-l border-[var(--color-border-secondary)] ${ans.status === 'issue' ? 'bg-[#A32D2D] text-white' : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-background-secondary)]'}`}>
+                                          <i className="ti ti-flag text-[13px] block" />
+                                        </button>
+                                      </div>
+                                      <span className="text-[12px] text-[var(--color-text-primary)]">{it.name}</span>
+                                    </div>
                                     {it.field_type !== 'ok' && (
                                       <input type={it.field_type === 'number' ? 'number' : 'text'} value={ans.value} onChange={e => setItem(eq.id, it.id, { value: e.target.value })}
                                         placeholder={it.field_type === 'number' ? 'value' : 'reading'} className={`${inputCls} w-[90px]`} />
@@ -351,11 +395,20 @@ export default function InspectionV2Form({
           })}
         </div>
 
+        {blankWarn > 0 && (
+          <div className="px-5 py-2 border-t border-[#E4C77B] bg-[#FAF3E0] text-[11px] text-[#5A4212] flex flex-wrap items-center gap-2 flex-shrink-0">
+            <i className="ti ti-alert-triangle text-[13px] text-[#854F0B]" />
+            <span className="flex-1 min-w-[160px]">{blankWarn} item{blankWarn !== 1 ? 's' : ''} not yet inspected (still blank). Mark each OK or flag an issue, or save anyway.</span>
+            <button type="button" onClick={() => setBlankWarn(0)} className="px-2.5 py-[5px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Keep inspecting</button>
+            <button type="button" onClick={() => save(true)} disabled={saving} className="px-2.5 py-[5px] bg-[#854F0B] text-white rounded-[var(--border-radius-md)] hover:bg-[#6A3E08] disabled:opacity-50">Save anyway</button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--color-border-tertiary)] bg-[var(--color-background-secondary)] flex-shrink-0">
-          {error ? <p className="text-[12px] text-[#A32D2D]">{error}</p> : <span className="text-[11px] text-[var(--color-text-tertiary)]">Tap an area to inspect the equipment there.</span>}
+          {error ? <p className="text-[12px] text-[#A32D2D]">{error}</p> : <span className="text-[11px] text-[var(--color-text-tertiary)]">Tap ✓ if OK, ⚑ to flag an issue. Blank = not yet inspected.</span>}
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-[5px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Cancel</button>
-            <button onClick={save} disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
+            <button onClick={() => save()} disabled={saving} className="inline-flex items-center gap-1 px-3 py-[5px] text-[12px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C] disabled:opacity-50">
               <i className="ti ti-device-floppy text-[13px]" /> {saving ? 'Saving…' : 'Save'}
             </button>
           </div>

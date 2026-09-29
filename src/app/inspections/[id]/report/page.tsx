@@ -187,7 +187,14 @@ export default async function InspectionReportPage({ params }: { params: Promise
 type V2Item = { id: string; name: string; field_type: string; scheduled: boolean }
 type V2Eq = { id: string; name: string; category: string; hoursTracked: boolean; items: V2Item[] }
 type V2Area = { area: string; equipment: V2Eq[] }
-type V2Answer = { ok?: boolean; value?: string; notes?: string; done?: boolean }
+type V2Answer = { status?: 'unset' | 'ok' | 'issue'; ok?: boolean; value?: string; notes?: string; done?: boolean }
+
+// Derive the three-state status, mapping the legacy boolean `ok` shape.
+function v2Status(a?: V2Answer): 'unset' | 'ok' | 'issue' {
+  if (!a) return 'unset'
+  if (typeof a.status === 'string') return a.status
+  return a.ok === false ? 'issue' : a.ok === true ? 'ok' : 'unset'
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function V2Report({ data, logoUrl }: { data: any; logoUrl: string | null }) {
@@ -197,7 +204,7 @@ function V2Report({ data, logoUrl }: { data: any; logoUrl: string | null }) {
   const flagged: { where: string; item: string; note: string }[] = []
   for (const area of snapshot) for (const eq of area.equipment) for (const it of eq.items) {
     const a = answers[eq.id]?.items?.[it.id]
-    if (a?.ok === false) flagged.push({ where: `${area.area} · ${eq.name}`, item: it.name, note: a?.notes ?? '' })
+    if (v2Status(a) === 'issue') flagged.push({ where: `${area.area} · ${eq.name}`, item: it.name, note: a?.notes ?? '' })
   }
 
   return (
@@ -241,7 +248,10 @@ function V2Report({ data, logoUrl }: { data: any; logoUrl: string | null }) {
                     <tbody>
                       {eq.items.map(it => {
                         const a = ea?.items?.[it.id]
-                        const mark = a?.ok === false ? <span className="text-[#A32D2D] font-semibold">✗</span> : <span className="text-[#3B6D11] font-semibold">✓</span>
+                        const st = v2Status(a)
+                        const mark = st === 'issue' ? <span className="text-[#A32D2D] font-semibold">✗</span>
+                          : st === 'ok' ? <span className="text-[#3B6D11] font-semibold">✓</span>
+                          : <span className="text-[#a8a29e]">—</span>
                         return (
                           <tr key={it.id} className="border-t border-[#f0eeec]">
                             <td className="py-1 pr-2 w-[40%]">{it.name}</td>
