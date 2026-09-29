@@ -81,6 +81,15 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
               className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]" />
           </div>
 
+          <div>
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Equipment</label>
+            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)}
+              className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
+              <option value="">— None —</option>
+              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+            </select>
+          </div>
+
           <div className="grid grid-cols-2 gap-[10px]">
             <div>
               <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Category</label>
@@ -114,15 +123,6 @@ export default function NewTicketModal({ vesselId, onClose, onCreated }: Props) 
                 {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-[3px]">Equipment</label>
-            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)}
-              className="w-full px-[9px] py-[6px] text-[12px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)]">
-              <option value="">— None —</option>
-              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
-            </select>
           </div>
 
           <div>
