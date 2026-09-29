@@ -320,6 +320,13 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
             <label className={lbl}>Description *</label>
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={cls} />
           </div>
+          <div>
+            <label className={lbl}>Equipment</label>
+            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)} className={cls}>
+              <option value="">— None —</option>
+              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-[10px]">
             <div>
               <label className={lbl}>Category</label>
@@ -357,13 +364,6 @@ function TicketDetail({ ticket: t, numberLabel, onClose, onSave, onDelete, onAtt
                 <option value="closed">Closed</option>
               </select>
             </div>
-          </div>
-          <div>
-            <label className={lbl}>Equipment</label>
-            <select value={equipmentId} onChange={e => setEquipmentId(e.target.value)} className={cls}>
-              <option value="">— None —</option>
-              {equipment.map(eq => <option key={eq.id} value={eq.id}>{eq.name}</option>)}
-            </select>
           </div>
           <div>
             <label className={lbl}>Details</label>
