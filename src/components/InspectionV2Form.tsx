@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { computeTask, fmtDate, isScheduled } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
@@ -13,6 +13,17 @@ export type EqLite = { id: string; name: string; category: string; area: string 
 export type ItemLite = { id: string; name: string; interval_type: 'hours' | 'months' | null; interval_value: number | null; field_type: 'ok' | 'text' | 'number'; last_done_date: string | null; last_done_hours: number | null }
 type Answer = { ok: boolean; value: string; notes: string; done: boolean }
 type EqAnswers = { hours: string; items: Record<string, Answer> }
+
+// An unsaved in-progress inspection, persisted to localStorage so a mobile
+// browser discarding the backgrounded tab doesn't lose entered data.
+type Draft = { answers: Record<string, EqAnswers>; groups: SnapArea[]; tech: string; month: string; year: number; date: string; ts: number }
+
+function readDraft(key: string): Draft | null {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null
+    return raw ? (JSON.parse(raw) as Draft) : null
+  } catch { return null }
+}
 
 // A snapshot equipment/item (frozen on the inspection so it renders forever).
 type SnapItem = { id: string; name: string; field_type: 'ok' | 'text' | 'number'; scheduled: boolean; interval_type: 'hours' | 'months' | null; interval_value: number | null; last_done_date: string | null; last_done_hours: number | null }
@@ -55,7 +66,14 @@ export default function InspectionV2Form({
 }) {
   const ds = useDueSoon()
   const today = new Date().toISOString().slice(0, 10)
-  const groups: SnapArea[] = existing?.snapshot ?? buildSnapshot(equipment, tasksByEq)
+  const draftKey = `insp-draft:v2:${vesselId}:${existing?.id ?? 'new'}`
+  // A previously auto-saved draft found on mount — offered for restore rather
+  // than applied silently (so editing a real inspection isn't clobbered).
+  const [pendingDraft, setPendingDraft] = useState<Draft | null>(() => readDraft(draftKey))
+  // Existing inspections render from their frozen snapshot so historical reports
+  // stay stable; "Refresh items from equipment" (below) re-syncs on demand.
+  const [groups, setGroups] = useState<SnapArea[]>(() => existing?.snapshot ?? buildSnapshot(equipment, tasksByEq))
+  const [justRefreshed, setJustRefreshed] = useState(false)
   const eqCurHours: Record<string, number | null> = Object.fromEntries(equipment.map(e => [e.id, e.current_hours]))
 
   const [tech, setTech]   = useState(existing?.tech ?? 'Dale')
@@ -88,8 +106,52 @@ export default function InspectionV2Form({
   function setHours(eqId: string, v: string) {
     setAnswers(prev => ({ ...prev, [eqId]: { ...prev[eqId], hours: v } }))
   }
+  // Re-sync this inspection with the current equipment/items: pulls in newly
+  // added items (and equipment) while keeping every answer already entered.
+  function refreshFromEquipment() {
+    const fresh = buildSnapshot(equipment, tasksByEq)
+    setAnswers(prev => {
+      const out: Record<string, EqAnswers> = {}
+      for (const area of fresh) for (const eq of area.equipment) {
+        const priorEq = prev[eq.id]
+        const items: Record<string, Answer> = {}
+        for (const it of eq.items) items[it.id] = priorEq?.items?.[it.id] ?? { ok: true, value: '', notes: '', done: false }
+        out[eq.id] = { hours: priorEq?.hours ?? (eqCurHours[eq.id]?.toString() ?? ''), items }
+      }
+      return out
+    })
+    setGroups(fresh)
+    setJustRefreshed(true)
+  }
   function toggleArea(a: string) {
     setOpenAreas(prev => { const n = new Set(prev); n.has(a) ? n.delete(a) : n.add(a); return n })
+  }
+
+  // Continuously persist the in-progress inspection so a discarded tab / reload
+  // doesn't lose data. Skipped while a draft is pending restore (would clobber it).
+  useEffect(() => {
+    if (pendingDraft) return
+    const id = setTimeout(() => {
+      try {
+        window.localStorage.setItem(draftKey, JSON.stringify({ answers, groups, tech, month, year, date, ts: Date.now() } satisfies Draft))
+      } catch { /* storage unavailable (private mode, quota) — nothing to do */ }
+    }, 400)
+    return () => clearTimeout(id)
+  }, [answers, groups, tech, month, year, date, pendingDraft, draftKey])
+
+  function clearDraft() {
+    try { window.localStorage.removeItem(draftKey) } catch { /* ignore */ }
+  }
+  function restoreDraft() {
+    if (!pendingDraft) return
+    setAnswers(pendingDraft.answers)
+    setGroups(pendingDraft.groups)
+    setTech(pendingDraft.tech); setMonth(pendingDraft.month); setYear(pendingDraft.year); setDate(pendingDraft.date)
+    setPendingDraft(null)
+  }
+  function discardDraft() {
+    clearDraft()
+    setPendingDraft(null)
   }
   function areaFlags(area: SnapArea) {
     let n = 0
@@ -119,6 +181,7 @@ export default function InspectionV2Form({
       setSaving(false); return
     }
     if (err) { setError(err.message); setSaving(false); return }
+    clearDraft() // saved to DB — the local draft is no longer needed
 
     // Best-effort write-through: hours → equipment, mark-done → tasks, last_inspected, tickets.
     try {
@@ -193,9 +256,30 @@ export default function InspectionV2Form({
           <Meta label="Year"><input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className={`${inputCls} w-[80px]`} /></Meta>
           <Meta label="Date"><input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} /></Meta>
           <Meta label="Tech"><input type="text" value={tech} onChange={e => setTech(e.target.value)} className={`${inputCls} w-[120px]`} /></Meta>
+          {existing && (
+            <button type="button" onClick={refreshFromEquipment} title="Pull in items added on the Equipment page since this inspection was created — your entered answers are kept."
+              className="ml-auto inline-flex items-center gap-1 px-2.5 py-[6px] text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background-tertiary)]">
+              <i className="ti ti-refresh text-[12px]" /> Refresh items from equipment
+            </button>
+          )}
         </div>
+        {justRefreshed && (
+          <div className="px-5 py-1.5 border-b border-[var(--color-border-tertiary)] bg-[#EAF3E9] text-[11px] text-[#2F6A2E] flex-shrink-0">
+            <i className="ti ti-check text-[12px]" /> Synced with current equipment — any newly added items now appear below. Your entered answers were kept. Save to keep the update.
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {pendingDraft && (
+            <div className="border border-[#E4C77B] bg-[#FAF3E0] rounded-[var(--border-radius-md)] p-3 flex flex-wrap items-center gap-2">
+              <i className="ti ti-history text-[15px] text-[#854F0B]" />
+              <span className="text-[12px] text-[#5A4212] flex-1 min-w-[180px]">
+                Unsaved inspection found from {new Date(pendingDraft.ts).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}. Restore your entries?
+              </span>
+              <button type="button" onClick={restoreDraft} className="px-2.5 py-[5px] text-[11px] bg-[#185FA5] text-white rounded-[var(--border-radius-md)] hover:bg-[#0C447C]">Restore</button>
+              <button type="button" onClick={discardDraft} className="px-2.5 py-[5px] text-[11px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] hover:bg-[var(--color-background-secondary)]">Discard</button>
+            </div>
+          )}
           {groups.length === 0 && <p className="text-[12px] text-[var(--color-text-secondary)]">No equipment yet. Add equipment (with an area) first.</p>}
           {groups.map(area => {
             const open = openAreas.has(area.area)
