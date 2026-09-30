@@ -67,7 +67,22 @@ export default async function InspectionReportPage({ params }: { params: Promise
   const logoUrl = (v?.logo_url ?? null) as string | null
 
   // New equipment/area-based inspections render their own report.
-  if (data.format === 'v2') return <V2Report data={data} logoUrl={logoUrl} />
+  if (data.format === 'v2') {
+    // Equipment notes as of the inspection date (so the report stays a stable
+    // point-in-time document — notes added later don't appear retroactively).
+    const eqIds = ((data.snapshot ?? []) as V2Area[]).flatMap(a => a.equipment.map(e => e.id))
+    const notesByEq: Record<string, EqNote[]> = {}
+    if (eqIds.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: notes } = await (supabase as any).from('equipment_notes')
+        .select('equipment_id, note, author, created_at')
+        .in('equipment_id', eqIds)
+        .lte('created_at', `${data.date}T23:59:59`)
+        .order('created_at', { ascending: false })
+      for (const n of (notes ?? []) as (EqNote & { equipment_id: string })[]) (notesByEq[n.equipment_id] ??= []).push(n)
+    }
+    return <V2Report data={data} logoUrl={logoUrl} notesByEq={notesByEq} />
+  }
 
   // Flagged items summary
   const flagged: { section: string; item: string; note: string }[] = []
@@ -188,6 +203,11 @@ type V2Item = { id: string; name: string; field_type: string; scheduled: boolean
 type V2Eq = { id: string; name: string; category: string; hoursTracked: boolean; items: V2Item[] }
 type V2Area = { area: string; equipment: V2Eq[] }
 type V2Answer = { status?: 'unset' | 'ok' | 'issue'; ok?: boolean; value?: string; notes?: string; done?: boolean }
+type EqNote = { note: string; author: string | null; created_at: string }
+
+function fmtNoteWhen(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 // Derive the three-state status, mapping the legacy boolean `ok` shape.
 function v2Status(a?: V2Answer): 'unset' | 'ok' | 'issue' {
@@ -197,7 +217,7 @@ function v2Status(a?: V2Answer): 'unset' | 'ok' | 'issue' {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function V2Report({ data, logoUrl }: { data: any; logoUrl: string | null }) {
+function V2Report({ data, logoUrl, notesByEq }: { data: any; logoUrl: string | null; notesByEq: Record<string, EqNote[]> }) {
   const snapshot = (data.snapshot ?? []) as V2Area[]
   const answers = (data.equipment_answers ?? {}) as Record<string, { hours?: string; items?: Record<string, V2Answer> }>
 
@@ -263,6 +283,18 @@ function V2Report({ data, logoUrl }: { data: any; logoUrl: string | null }) {
                       })}
                     </tbody>
                   </table>
+                  {(notesByEq[eq.id]?.length ?? 0) > 0 && (
+                    <div className="mt-1 ml-1 border-l-2 border-[#d6d3d1] pl-2">
+                      <div className="text-[10px] uppercase tracking-wide text-[#78716c] font-semibold mb-0.5">Notes</div>
+                      <ul className="space-y-0.5">
+                        {notesByEq[eq.id].map((n, i) => (
+                          <li key={i} className="text-[11px] text-[#44403c]">
+                            <span className="text-[#78716c]">{fmtNoteWhen(n.created_at)}{n.author ? ` · ${n.author}` : ''}:</span> {n.note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )
             })}
