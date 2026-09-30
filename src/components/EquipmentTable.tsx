@@ -9,6 +9,7 @@ import ServiceStatusBadge from './ServiceStatusBadge'
 import { useEquipmentCategories, useAreas } from './CategoriesProvider'
 import { useDueSoon } from './SettingsProvider'
 import { serviceMediaUrl, type ServiceAttachment } from '@/lib/service-media'
+import EquipmentNotes from './EquipmentNotes'
 import type { Database } from '@/types/database'
 
 type Equipment = Database['public']['Tables']['equipment']['Row']
@@ -555,7 +556,12 @@ function EquipmentEditModal({ equipment: e, tasks: initialTasks, onClose, onSave
             )}
           </div>
 
-          {field('Notes', <textarea value={notes} onChange={ev => setNotes(ev.target.value)} rows={2} className={`${cls} resize-y`} />)}
+          {field('Description', <textarea value={notes} onChange={ev => setNotes(ev.target.value)} rows={2} placeholder="Standing info — model quirks, locations, specs, dealer…" className={`${cls} resize-y`} />)}
+
+          <div className="pt-1 border-t border-[var(--color-border-tertiary)]">
+            <label className="block text-[11px] text-[var(--color-text-secondary)] mb-1.5 mt-2">Notes log</label>
+            <EquipmentNotes equipmentId={e.id} vesselId={e.vessel_id} author={assignedTech || 'Dale'} />
+          </div>
 
           {error && <p className="text-[12px] text-[#A32D2D]">{error}</p>}
 

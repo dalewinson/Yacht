@@ -6,6 +6,7 @@ import { computeTask, fmtDate, isScheduled } from '@/lib/utils'
 import ServiceStatusBadge from './ServiceStatusBadge'
 import { FlaggedReview, type Candidate } from './InspectionsClient'
 import { useDueSoon } from './SettingsProvider'
+import EquipmentNotes from './EquipmentNotes'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -94,6 +95,7 @@ export default function InspectionV2Form({
   const [year, setYear]   = useState(existing?.year ?? new Date().getFullYear())
   const [date, setDate]   = useState(existing?.date ?? today)
   const [openAreas, setOpenAreas] = useState<Set<string>>(new Set())
+  const [openNotes, setOpenNotes] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [blankWarn, setBlankWarn] = useState(0)
@@ -139,6 +141,9 @@ export default function InspectionV2Form({
   }
   function toggleArea(a: string) {
     setOpenAreas(prev => { const n = new Set(prev); n.has(a) ? n.delete(a) : n.add(a); return n })
+  }
+  function toggleNotes(eqId: string) {
+    setOpenNotes(prev => { const n = new Set(prev); n.has(eqId) ? n.delete(eqId) : n.add(eqId); return n })
   }
 
   // Continuously persist the in-progress inspection so a discarded tab / reload
@@ -386,6 +391,18 @@ export default function InspectionV2Form({
                             })}
                           </div>
                         )}
+
+                        <div className="mt-2 pt-2 border-t border-[var(--color-border-tertiary)]">
+                          <button type="button" onClick={() => toggleNotes(eq.id)} className="text-[11px] text-[#185FA5] hover:underline inline-flex items-center gap-1">
+                            <i className={`ti ti-chevron-${openNotes.has(eq.id) ? 'down' : 'right'} text-[11px]`} />
+                            <i className="ti ti-notes text-[12px]" /> Notes
+                          </button>
+                          {openNotes.has(eq.id) && (
+                            <div className="mt-2">
+                              <EquipmentNotes equipmentId={eq.id} vesselId={vesselId} author={tech || 'Dale'} />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

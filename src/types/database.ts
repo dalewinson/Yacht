@@ -52,6 +52,11 @@ export interface Database {
         Insert: { id?: string; vessel_id: string; name: string; category: string; area?: string | null; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
         Update: { name?: string; category?: string; area?: string | null; model?: string | null; serial?: string | null; last_service?: string | null; next_due?: string | null; interval?: ServiceInterval; interval_type?: 'hours' | 'months' | null; interval_value?: number | null; current_hours?: number | null; last_service_hours?: number | null; last_inspected?: string | null; assigned_tech?: string | null; notes?: string | null }
       }
+      equipment_notes: {
+        Row: { id: string; equipment_id: string; vessel_id: string | null; note: string; author: string | null; created_at: string }
+        Insert: { id?: string; equipment_id: string; vessel_id?: string | null; note: string; author?: string | null; created_at?: string }
+        Update: { note?: string; author?: string | null }
+      }
       service_log: {
         Row: { id: string; vessel_id: string; equipment_id: string | null; equipment_name: string; date: string; work_performed: string; tech: string | null; cost: number | null; parts_used: string | null; notes: string | null; created_at: string }
         Insert: { id?: string; vessel_id: string; equipment_id?: string | null; equipment_name: string; date: string; work_performed: string; tech?: string | null; cost?: number | null; parts_used?: string | null; notes?: string | null }
